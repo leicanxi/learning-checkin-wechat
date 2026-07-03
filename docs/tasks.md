@@ -8,7 +8,7 @@
 
 ## 一、项目初始化
 
-### [ ] Task 1: 后端项目初始化
+### [x] Task 1: 后端项目初始化
 - **Priority**: high
 - **Depends On**: None
 - **Description**: 
@@ -33,7 +33,7 @@
   - `programmatic` TR-1.3: 数据库迁移脚本可正确执行，新增字段无遗漏
 - **Notes**: 使用 pipenv 或 venv 管理依赖
 
-### [ ] Task 2: 前端项目初始化
+### [x] Task 2: 前端项目初始化
 - **Priority**: high
 - **Depends On**: None
 - **Description**: 
@@ -55,7 +55,7 @@
 
 ## 二、用户认证模块
 
-### [ ] Task 3: 用户注册与登录 API
+### [x] Task 3: 用户注册与登录 API
 - **Priority**: high
 - **Depends On**: Task 1
 - **Description**: 
@@ -70,7 +70,7 @@
   - `programmatic` TR-3.3: 密码正确哈希存储，不泄露明文
 - **Notes**: 邮箱登录仅用于开发调试，不暴露于小程序前端入口
 
-### [ ] Task 3b: 微信小程序登录 API
+### [x] Task 3b: 微信小程序登录 API
 - **Priority**: high
 - **Depends On**: Task 1
 - **Description**: 
@@ -88,7 +88,7 @@
   - `programmatic` TR-3b.3: 无效 code → 返回 401
 - **Notes**: 测试阶段可用测试号 AppSecret
 
-### [ ] Task 4: 用户信息管理 API
+### [x] Task 4: 用户信息管理 API
 - **Priority**: medium
 - **Depends On**: Task 3, Task 3b
 - **Description**: 
@@ -102,7 +102,7 @@
   - `programmatic` TR-4.3: POST /auth/avatar 成功上传头像文件
 - **Notes**: 头像文件大小限制在 2MB 以内
 
-### [ ] Task 5: 前端登录页面
+### [x] Task 5: 前端登录页面
 - **Priority**: high
 - **Depends On**: Task 2, Task 3b
 - **Description**: 
@@ -122,7 +122,7 @@
 
 ## 三、打卡任务模块
 
-### [ ] Task 6: 任务管理 API
+### [x] Task 6: 任务管理 API
 - **Priority**: high
 - **Depends On**: Task 3b
 - **Description**: 
@@ -142,7 +142,7 @@
   - `programmatic` TR-6.5: POST /tasks/batch 批量创建成功
 - **Notes**: tasks 表需包含 migration 以增加 v2.0 新字段
 
-### [ ] Task 7: 打卡记录 API
+### [x] Task 7: 打卡记录 API
 - **Priority**: high
 - **Depends On**: Task 6
 - **Description**: 
@@ -162,7 +162,7 @@
   - `programmatic` TR-7.5: 补打卡最近 7 天内成功
 - **Notes**: 打卡时同步写入 checkins.subject（冗余 task.subject）
 
-### [ ] Task 8: 首页任务列表组件
+### [x] Task 8: 首页任务列表组件
 - **Priority**: high
 - **Depends On**: Task 5, Task 6, Task 7
 - **Description**: 
@@ -179,7 +179,7 @@
   - `programmatic` TR-8.3: 三指标卡片数据正确渲染
 - **Notes**: 添加加载状态和空数据提示
 
-### [ ] Task 9: 规划页自定义计划组件
+### [x] Task 9: 规划页自定义计划组件
 - **Priority**: high
 - **Depends On**: Task 8
 - **Description**: 
@@ -198,7 +198,7 @@
 
 ## 四、进度日历模块
 
-### [ ] Task 10: 日历数据 API
+### [x] Task 10: 日历数据 API
 - **Priority**: high
 - **Depends On**: Task 7
 - **Description**: 
@@ -214,7 +214,7 @@
   - `programmatic` TR-10.3: 休息建议在连续打卡≥7 天时正确触发
 - **Notes**: 支持月份切换
 
-### [ ] Task 11: 日历页面实现
+### [x] Task 11: 日历页面实现
 - **Priority**: high
 - **Depends On**: Task 5, Task 10
 - **Description**: 
@@ -234,7 +234,7 @@
 
 ## 五、统计看板模块
 
-### [ ] Task 12: 统计数据 API
+### [x] Task 12: 统计数据 API
 - **Priority**: high
 - **Depends On**: Task 7
 - **Description**: 
@@ -252,7 +252,7 @@
   - `programmatic` TR-12.3: subject_distribution 科目分布数据正确
 - **Notes**: 支持时间维度切换
 
-### [ ] Task 13: 统计页面实现
+### [x] Task 13: 统计页面实现
 - **Priority**: high
 - **Depends On**: Task 5, Task 12
 - **Description**: 
@@ -272,7 +272,7 @@
 
 ## 六、AI辅助学习模块
 
-### [ ] Task 14: AI服务集成
+### [x] Task 14: AI服务集成
 - **Priority**: high
 - **Depends On**: Task 3b
 - **Description**: 
@@ -294,7 +294,7 @@
   - `programmatic` TR-14.6: daily 模式子任务不一定每天排（间隔分布）
 - **Notes**: API 密钥存储在环境变量中；Prompts 模板见 spec.md 4.4 节
 
-### [ ] Task 14b: AI规划页增强功能
+### [x] Task 14b: AI规划页增强功能
 - **Priority**: medium
 - **Depends On**: Task 2, Task 14
 - **Description**: 
@@ -309,7 +309,7 @@
   - `human-judgement` TR-14b.3: 模式选择器 UI 清晰
 - **Notes**: 语音识别使用腾讯云 ASR，通过微信原生录音获取音频 → 后端调用腾讯云 API → 返回文本
 
-### [ ] Task 15: AI任务生成 API
+### [x] Task 15: AI任务生成 API
 - **Priority**: high
 - **Depends On**: Task 6, Task 14
 - **Description**: 
@@ -325,7 +325,7 @@
   - `programmatic` TR-15.3: 用户修改日期后，创建的任务 start_date 为用户调整后的值
 - **Notes**: 生成任务前需用户确认
 
-### [ ] Task 16: AI规划页面实现
+### [x] Task 16: AI规划页面实现
 - **Priority**: high
 - **Depends On**: Task 5, Task 9, Task 14, Task 14b, Task 15
 - **Description**: 
@@ -344,7 +344,7 @@
   - `programmatic` TR-16.4: 用户调整子任务日期后，确认创建时使用调整后的日期
 - **Notes**: 添加 loading 状态和错误处理；日期分组折叠交互参考日历 UI
 
-### [ ] Task 17: 遗忘曲线复习功能
+### [x] Task 17: 遗忘曲线复习功能
 - **Priority**: medium
 - **Depends On**: Task 7
 - **Description**: 
@@ -363,7 +363,7 @@
 
 ## 七、智能日历展望模块
 
-### [ ] Task 18: 智能日历 API
+### [x] Task 18: 智能日历 API
 - **Priority**: medium
 - **Depends On**: Task 7, Task 14
 - **Description**: 
@@ -377,7 +377,7 @@
   - `programmatic` TR-18.3: 休息建议逻辑正确
 - **Notes**: 今日任务全部完成后明日推荐自动更新
 
-### [ ] Task 19: 智能日历页面实现
+### [x] Task 19: 智能日历页面实现
 - **Priority**: medium
 - **Depends On**: Task 11, Task 18
 - **Description**: 
@@ -395,7 +395,7 @@
 
 ## 八、规律排行模块
 
-### [ ] Task 20: 规律性计算 API
+### [x] Task 20: 规律性计算 API
 - **Priority**: medium
 - **Depends On**: Task 7
 - **Description**: 
@@ -410,7 +410,7 @@
   - `programmatic` TR-20.3: 打卡＜7 次返回 insufficient
 - **Notes**: 不暴露具体排名数字
 
-### [ ] Task 21: 徽章系统 API
+### [x] Task 21: 徽章系统 API
 - **Priority**: low
 - **Depends On**: Task 20
 - **Description**: 
@@ -425,7 +425,7 @@
   - `programmatic` TR-21.2: 达到条件时自动授予徽章
 - **Notes**: 徽章数据初始化到数据库
 
-### [ ] Task 22: 排行榜页面实现
+### [x] Task 22: 排行榜页面实现
 - **Priority**: medium
 - **Depends On**: Task 5, Task 20, Task 21
 - **Description**: 
@@ -444,7 +444,7 @@
 
 ## 九、设置与其它功能模块
 
-### [ ] Task 23: 提醒与设置 API
+### [x] Task 23: 提醒与设置 API
 - **Priority**: low
 - **Depends On**: Task 4
 - **Description**: 
@@ -459,7 +459,7 @@
   - `human-judgement` TR-23.3: 提醒时间到达时触发通知
 - **Notes**: 测试号无模板消息权限，使用本地弹窗降级方案
 
-### [ ] Task 23b: 小组管理 API
+### [x] Task 23b: 小组管理 API
 - **Priority**: medium
 - **Depends On**: Task 4
 - **Description**: 
@@ -474,7 +474,7 @@
   - `programmatic` TR-23b.3: 非创建者无法更新小组信息
 - **Notes**: 基础版小组功能（成员数/完成率/排名区间）
 
-### [ ] Task 24: 设置页面实现
+### [x] Task 24: 设置页面实现
 - **Priority**: medium
 - **Depends On**: Task 4, Task 23, Task 23b
 - **Description**: 
