@@ -242,7 +242,7 @@
     .task-meta { color:var(--stone); font-size:12px; margin-top:3px; line-height:1.35; }
 
     .calendar-card { margin-top:18px; padding:16px; }
-    .calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; }
     .month-title { font-family:var(--serif); font-size:24px; font-weight:500; }
     .week-grid,.date-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:7px; }
     .week-grid { color:var(--stone); font-size:11px; text-align:center; margin-bottom:8px; }
@@ -346,6 +346,109 @@
     .track { height:9px; border-radius:999px; background:var(--sand); overflow:hidden; }
     .fill { height:100%; border-radius:999px; background:var(--terracotta); display:block; }
 
+    .rank-hero {
+      margin-top:18px;
+      padding:18px;
+      border-radius:24px;
+      background:var(--black);
+      color:var(--ivory);
+      position:relative;
+      overflow:hidden;
+    }
+    .rank-hero:after {
+      content:"";
+      position:absolute;
+      width:120px;
+      height:120px;
+      right:-42px;
+      bottom:-48px;
+      border-radius:50%;
+      border:1px solid rgba(217,119,87,.42);
+    }
+    .rank-label-row {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      position:relative;
+      z-index:1;
+    }
+    .rank-hero label { color:var(--silver); font-size:12px; }
+    .info-btn {
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background:var(--dark);
+      color:var(--silver);
+      display:grid;
+      place-items:center;
+      font-size:13px;
+      font-weight:700;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+    .rank-hero strong {
+      display:block;
+      font-family:var(--serif);
+      font-size:42px;
+      font-weight:500;
+      margin:8px 0;
+      position:relative;
+      z-index:1;
+    }
+    .rank-hero p {
+      margin:0;
+      color:var(--silver);
+      font-size:13px;
+      line-height:1.5;
+      position:relative;
+      z-index:1;
+    }
+    .tier-row { display:grid; grid-template-columns:58px 1fr; gap:12px; padding:12px 0; border-top:1px solid var(--cream); }
+    .tier-row:first-child { border-top:0; }
+    .tier-range { font-size:12px; color:var(--terracotta); }
+    .tier-row strong { display:block; font-size:14px; }
+    .tier-row span { color:var(--stone); font-size:12px; }
+
+    .badge-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .badge-toggle {
+      min-height:32px;
+      padding:0 12px;
+      border-radius:999px;
+      background:var(--sand);
+      color:var(--charcoal);
+      box-shadow:0 0 0 1px var(--ring);
+      font-size:12px;
+      font-weight:600;
+    }
+    .badge-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .badge {
+      min-height:82px;
+      padding:12px 8px;
+      border-radius:16px;
+      background:var(--ivory);
+      border:1px solid var(--cream);
+      text-align:center;
+    }
+    .badge.extra { display:none; }
+    .badge-grid.expanded .badge.extra { display:block; }
+    .badge-icon {
+      width:30px;
+      height:30px;
+      margin:0 auto 8px;
+      border-radius:12px;
+      background:var(--clay-soft);
+      color:var(--terracotta);
+      display:grid;
+      place-items:center;
+      font-weight:700;
+    }
+    .badge span { font-size:12px; color:var(--charcoal); line-height:1.3; }
+
     .planner { margin-top:18px; padding:16px; }
     .label-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
     .field-label { display:block; color:var(--stone); font-size:12px; }
@@ -426,11 +529,7 @@
       color:var(--ivory);
       box-shadow:inset 0 0 0 1px var(--dark);
     }
-    .weekday-grid {
-      display:grid;
-      grid-template-columns:repeat(7,1fr);
-      gap:6px;
-    }
+    .weekday-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
     .weekday {
       min-height:32px;
       border-radius:999px;
@@ -480,45 +579,6 @@
     }
     .generated-task p { margin:0; color:var(--olive); font-size:14px; line-height:1.45; outline:none; }
     .icon-btn { width:28px; height:28px; border-radius:9px; background:var(--sand); color:var(--charcoal); box-shadow:0 0 0 1px var(--ring); }
-
-    .rank-hero {
-      margin-top:18px;
-      padding:18px;
-      border-radius:24px;
-      background:var(--black);
-      color:var(--ivory);
-      position:relative;
-      overflow:hidden;
-    }
-    .rank-hero label { color:var(--silver); font-size:12px; }
-    .rank-hero strong { display:block; font-family:var(--serif); font-size:42px; font-weight:500; margin:8px 0; }
-    .rank-hero p { margin:0; color:var(--silver); font-size:13px; line-height:1.5; }
-    .tier-row { display:grid; grid-template-columns:58px 1fr; gap:12px; padding:12px 0; border-top:1px solid var(--cream); }
-    .tier-row:first-child { border-top:0; }
-    .tier-range { font-size:12px; color:var(--terracotta); }
-    .tier-row strong { display:block; font-size:14px; }
-    .tier-row span { color:var(--stone); font-size:12px; }
-    .badge-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
-    .badge {
-      min-height:82px;
-      padding:12px 8px;
-      border-radius:16px;
-      background:var(--ivory);
-      border:1px solid var(--cream);
-      text-align:center;
-    }
-    .badge-icon {
-      width:30px;
-      height:30px;
-      margin:0 auto 8px;
-      border-radius:12px;
-      background:var(--clay-soft);
-      color:var(--terracotta);
-      display:grid;
-      place-items:center;
-      font-weight:700;
-    }
-    .badge span { font-size:12px; color:var(--charcoal); line-height:1.3; }
 
     .setting-title-small { color:var(--stone); font-size:12px; margin:22px 0 8px; letter-spacing:.05em; }
     .settings-list { padding:2px 14px; }
@@ -572,7 +632,7 @@
       border-top:1px solid var(--border);
       backdrop-filter:blur(18px);
       display:grid;
-      grid-template-columns:repeat(6,1fr);
+      grid-template-columns:repeat(5,1fr);
       z-index:20;
     }
     .tab {
@@ -615,9 +675,6 @@
       box-shadow:6px -5px 0 currentColor, 12px -2px 0 currentColor;
     }
 
-    .icon-rank:before { left:3px; right:3px; top:5px; bottom:4px; border:1.8px solid currentColor; border-radius:50% 50% 45% 45%; }
-    .icon-rank:after { left:8px; top:2px; width:6px; height:6px; background:currentColor; border-radius:50%; }
-
     .icon-settings:before { inset:4px; border:1.8px solid currentColor; border-radius:50%; }
     .icon-settings:after { width:6px; height:6px; background:currentColor; border-radius:50%; left:8px; top:8px; }
 
@@ -627,6 +684,16 @@
     .grabber { width:42px; height:5px; background:var(--ring); border-radius:999px; margin:0 auto 18px; }
     .sheet h3 { margin:0; font-family:var(--serif); font-size:25px; font-weight:500; }
     .sheet p { color:var(--olive); line-height:1.55; margin:8px 0 16px; }
+    .sheet-list { display:grid; gap:10px; margin:14px 0 16px; }
+    .sheet-item {
+      padding:12px;
+      border-radius:14px;
+      background:var(--sand-soft);
+      border:1px solid var(--border);
+    }
+    .sheet-item strong { display:block; font-size:14px; margin-bottom:4px; }
+    .sheet-item span { color:var(--olive); font-size:12px; line-height:1.4; }
+
     .toast { position:absolute; left:24px; right:24px; bottom:96px; min-height:44px; border-radius:16px; background:rgba(20,20,19,.92); color:var(--ivory); display:none; place-items:center; font-size:14px; z-index:70; }
     .toast.show { display:grid; }
 
@@ -716,48 +783,6 @@
           </div>
         </article>
 
-        <article class="screen" id="screen-stats">
-          <div class="page-kicker">数据分析</div>
-          <h1 class="page-title">看见进步，也看见薄弱点。</h1>
-          <p class="page-subtitle">从趋势、知识掌握、完成数量和科目分布四个角度追踪学习状态。</p>
-
-          <div class="segmented">
-            <button class="active" data-period="week" type="button">周</button>
-            <button data-period="month" type="button">月</button>
-            <button data-period="year" type="button">年</button>
-            <button data-period="custom" type="button">自定义</button>
-          </div>
-
-          <section class="card pad mt">
-            <div class="calendar-head"><div class="month-title" id="trendTitle">近 7 天趋势</div><span class="tag" id="trendTag">完成 18 次</span></div>
-            <svg class="line-chart" viewBox="0 0 320 150" role="img" aria-label="打卡趋势折线图">
-              <defs><linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c96442" stop-opacity=".22"/><stop offset="1" stop-color="#c96442" stop-opacity="0"/></linearGradient></defs>
-              <path d="M12 122 L58 96 L104 104 L150 62 L196 48 L242 72 L288 38" fill="none" stroke="#c96442" stroke-width="3" stroke-linecap="round"/>
-              <path d="M12 122 L58 96 L104 104 L150 62 L196 48 L242 72 L288 38 L288 142 L12 142 Z" fill="url(#lineFill)"/>
-            </svg>
-          </section>
-
-          <div class="ring-grid">
-            <div class="ring-card"><div class="progress-ring ring-82"><span>82%</span></div><div><strong>英语词汇</strong><small>Unit 1-4 掌握较稳定</small></div></div>
-            <div class="ring-card"><div class="progress-ring ring-64"><span>64%</span></div><div><strong>物理电学</strong><small>概念题仍需复盘</small></div></div>
-          </div>
-
-          <section class="completion-card">
-            <span class="tag" style="background:var(--dark);color:var(--silver);box-shadow:none">累计完成打卡</span>
-            <div class="big" id="completedCount">64 次</div>
-            <p id="completionCopy">本周已完成 18 次学习任务，其中英语任务占比最高。连续完成率稳定，周末任务仍有提升空间。</p>
-          </section>
-
-          <section class="card pad mt">
-            <h2 class="section-title">科目打卡分布</h2>
-            <div class="bar-chart">
-              <div class="subject-row"><span>英语</span><div class="track"><i class="fill" style="width:78%"></i></div><span>78%</span></div>
-              <div class="subject-row"><span>数学</span><div class="track"><i class="fill" style="width:62%"></i></div><span>62%</span></div>
-              <div class="subject-row"><span>物理</span><div class="track"><i class="fill" style="width:46%;background:var(--sage)"></i></div><span>46%</span></div>
-            </div>
-          </section>
-        </article>
-
         <article class="screen" id="screen-ai">
           <div class="page-kicker">智能计划</div>
           <h1 class="page-title">把材料变成可执行的学习任务。</h1>
@@ -819,13 +844,55 @@
           </section>
         </article>
 
-        <article class="screen" id="screen-rank">
-          <div class="page-kicker">规律性排名</div>
-          <h1 class="page-title">比较节奏，不比较焦虑。</h1>
-          <p class="page-subtitle">排行榜只展示规律性区间和徽章，不公开具体学习内容。</p>
+        <article class="screen" id="screen-stats">
+          <div class="page-kicker">数据与排行</div>
+          <h1 class="page-title">看见进步，也看见位置。</h1>
+          <p class="page-subtitle">统计页合并排行榜：先看学习趋势，再查看小组与全局排名。</p>
+
+          <div class="segmented">
+            <button class="active" data-period="week" type="button">周</button>
+            <button data-period="month" type="button">月</button>
+            <button data-period="year" type="button">年</button>
+            <button data-period="custom" type="button">自定义</button>
+          </div>
+
+          <section class="card pad mt">
+            <div class="calendar-head"><div class="month-title" id="trendTitle">近 7 天趋势</div><span class="tag" id="trendTag">完成 18 次</span></div>
+            <svg class="line-chart" viewBox="0 0 320 150" role="img" aria-label="打卡趋势折线图">
+              <defs><linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c96442" stop-opacity=".22"/><stop offset="1" stop-color="#c96442" stop-opacity="0"/></linearGradient></defs>
+              <path d="M12 122 L58 96 L104 104 L150 62 L196 48 L242 72 L288 38" fill="none" stroke="#c96442" stroke-width="3" stroke-linecap="round"/>
+              <path d="M12 122 L58 96 L104 104 L150 62 L196 48 L242 72 L288 38 L288 142 L12 142 Z" fill="url(#lineFill)"/>
+              <g fill="#87867f" font-size="10">
+                <text x="6" y="148">五</text><text x="52" y="148">六</text><text x="98" y="148">日</text><text x="144" y="148">一</text><text x="190" y="148">二</text><text x="236" y="148">三</text><text x="282" y="148">四</text>
+              </g>
+            </svg>
+          </section>
+
+          <div class="ring-grid">
+            <div class="ring-card"><div class="progress-ring ring-82"><span>82%</span></div><div><strong>英语词汇</strong><small>Unit 1-4 掌握较稳定</small></div></div>
+            <div class="ring-card"><div class="progress-ring ring-64"><span>64%</span></div><div><strong>物理电学</strong><small>概念题仍需复盘</small></div></div>
+          </div>
+
+          <section class="completion-card">
+            <span class="tag" style="background:var(--dark);color:var(--silver);box-shadow:none">累计完成打卡</span>
+            <div class="big" id="completedCount">64 次</div>
+            <p id="completionCopy">本周已完成 18 次学习任务，其中英语任务占比最高。连续完成率稳定，周末任务仍有提升空间。</p>
+          </section>
+
+          <section class="card pad mt">
+            <h2 class="section-title">科目打卡分布</h2>
+            <div class="bar-chart">
+              <div class="subject-row"><span>英语</span><div class="track"><i class="fill" style="width:78%"></i></div><span>78%</span></div>
+              <div class="subject-row"><span>数学</span><div class="track"><i class="fill" style="width:62%"></i></div><span>62%</span></div>
+              <div class="subject-row"><span>物理</span><div class="track"><i class="fill" style="width:46%;background:var(--sage)"></i></div><span>46%</span></div>
+            </div>
+          </section>
 
           <section class="rank-hero">
-            <label id="rankScopeLabel">小组排名区间</label>
+            <div class="rank-label-row">
+              <label id="rankScopeLabel">小组排名区间</label>
+              <button class="info-btn" id="rankInfoBtn" type="button" aria-label="查看排名区间说明">i</button>
+            </div>
             <strong id="rankPercent">前 20%</strong>
             <p id="rankHonor">你已获得「规律达人」称号，最近 7 天有 5 天按计划完成。</p>
           </section>
@@ -836,24 +903,20 @@
           </div>
 
           <section class="card pad mt">
-            <h2 class="section-title">排名区间说明</h2>
-            <div class="tier-row"><div class="tier-range">前20%</div><div><strong>规律达人</strong><span>稳定执行，适合作为小组榜样。</span></div></div>
-            <div class="tier-row"><div class="tier-range">20-60%</div><div><strong>习惯养成者</strong><span>已形成基础节奏，建议减少中断。</span></div></div>
-            <div class="tier-row"><div class="tier-range">60%+</div><div><strong>继续加油</strong><span>先完成低压力任务，恢复连续性。</span></div></div>
-          </section>
-
-          <section class="card pad mt">
-            <h2 class="section-title">徽章墙</h2>
-            <div class="badge-grid">
+            <div class="badge-head">
+              <h2 class="section-title" style="margin:0">徽章墙</h2>
+              <button class="badge-toggle" id="badgeToggle" type="button">展开全部</button>
+            </div>
+            <div class="badge-grid" id="badgeGrid">
               <div class="badge"><div class="badge-icon">稳</div><span>规律达人</span></div>
               <div class="badge"><div class="badge-icon">进</div><span>进步之星</span></div>
               <div class="badge"><div class="badge-icon">7</div><span>七日连续</span></div>
-              <div class="badge"><div class="badge-icon">英</div><span>英语坚持</span></div>
-              <div class="badge"><div class="badge-icon">复</div><span>错题复盘</span></div>
-              <div class="badge"><div class="badge-icon">早</div><span>早起学习</span></div>
-              <div class="badge"><div class="badge-icon">夜</div><span>晚间专注</span></div>
-              <div class="badge"><div class="badge-icon">组</div><span>小组贡献</span></div>
-              <div class="badge"><div class="badge-icon">新</div><span>新计划创建</span></div>
+              <div class="badge extra"><div class="badge-icon">英</div><span>英语坚持</span></div>
+              <div class="badge extra"><div class="badge-icon">复</div><span>错题复盘</span></div>
+              <div class="badge extra"><div class="badge-icon">早</div><span>早起学习</span></div>
+              <div class="badge extra"><div class="badge-icon">夜</div><span>晚间专注</span></div>
+              <div class="badge extra"><div class="badge-icon">组</div><span>小组贡献</span></div>
+              <div class="badge extra"><div class="badge-icon">新</div><span>新计划创建</span></div>
             </div>
           </section>
         </article>
@@ -901,7 +964,6 @@
         <button class="tab" type="button" data-tab="calendar"><i class="tab-icon icon-calendar"></i><span>日历</span></button>
         <button class="tab" type="button" data-tab="ai"><i class="tab-icon icon-ai"></i><span>规划</span></button>
         <button class="tab" type="button" data-tab="stats"><i class="tab-icon icon-stats"></i><span>统计</span></button>
-        <button class="tab" type="button" data-tab="rank"><i class="tab-icon icon-rank"></i><span>排行</span></button>
         <button class="tab" type="button" data-tab="settings"><i class="tab-icon icon-settings"></i><span>设置</span></button>
       </nav>
 
@@ -911,6 +973,20 @@
           <h3 id="sheetTitle">7 月 10 日</h3>
           <p id="sheetText">当天完成了英语词汇和晨间错题复盘。</p>
           <button class="primary" id="closeModal" type="button" style="width:100%">知道了</button>
+        </section>
+      </div>
+
+      <div class="modal-layer" id="rankInfoModal">
+        <section class="sheet">
+          <div class="grabber"></div>
+          <h3>排名区间说明</h3>
+          <p>系统按打卡完成率、连续性、任务稳定度综合计算，只展示区间，不公开具体学习内容。</p>
+          <div class="sheet-list">
+            <div class="sheet-item"><strong>前 20% · 规律达人</strong><span>连续性稳定，完成率高，适合作为小组榜样。</span></div>
+            <div class="sheet-item"><strong>20–60% · 习惯养成者</strong><span>已有基础节奏，建议减少周末或考试前后的中断。</span></div>
+            <div class="sheet-item"><strong>60%+ · 继续加油</strong><span>先完成低压力任务，恢复连续性后排名会明显改善。</span></div>
+          </div>
+          <button class="primary" id="closeRankInfo" type="button" style="width:100%">知道了</button>
         </section>
       </div>
 
@@ -932,7 +1008,6 @@
       calendar:"学习日历",
       ai:"AI 规划",
       stats:"学习统计",
-      rank:"排行榜",
       settings:"设置"
     };
 
@@ -1059,6 +1134,35 @@
       });
     });
 
+    const rankScope = {
+      group:["小组排名区间","前 20%","你已获得「规律达人」称号，最近 7 天有 5 天按计划完成。"],
+      global:["全局排名区间","前 48%","全局范围更广，建议先稳定周末任务，减少中断。"]
+    };
+
+    document.querySelectorAll("[data-rank-scope]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-rank-scope]").forEach(item => item.classList.toggle("active", item === btn));
+        const data = rankScope[btn.dataset.rankScope];
+        document.getElementById("rankScopeLabel").textContent = data[0];
+        document.getElementById("rankPercent").textContent = data[1];
+        document.getElementById("rankHonor").textContent = data[2];
+      });
+    });
+
+    const rankInfoModal = document.getElementById("rankInfoModal");
+    document.getElementById("rankInfoBtn").addEventListener("click", () => rankInfoModal.classList.add("show"));
+    document.getElementById("closeRankInfo").addEventListener("click", () => rankInfoModal.classList.remove("show"));
+    rankInfoModal.addEventListener("click", event => {
+      if (event.target === rankInfoModal) rankInfoModal.classList.remove("show");
+    });
+
+    const badgeGrid = document.getElementById("badgeGrid");
+    const badgeToggle = document.getElementById("badgeToggle");
+    badgeToggle.addEventListener("click", () => {
+      const expanded = badgeGrid.classList.toggle("expanded");
+      badgeToggle.textContent = expanded ? "收起" : "展开全部";
+    });
+
     const generatedList = document.getElementById("generatedList");
     const aiResult = document.getElementById("aiResult");
     const goalInput = document.getElementById("goalInput");
@@ -1181,21 +1285,6 @@
     });
     renderTasks();
 
-    const rankScope = {
-      group:["小组排名区间","前 20%","你已获得「规律达人」称号，最近 7 天有 5 天按计划完成。"],
-      global:["全局排名区间","前 48%","全局范围更广，建议先稳定周末任务，减少中断。"]
-    };
-
-    document.querySelectorAll("[data-rank-scope]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-rank-scope]").forEach(item => item.classList.toggle("active", item === btn));
-        const data = rankScope[btn.dataset.rankScope];
-        document.getElementById("rankScopeLabel").textContent = data[0];
-        document.getElementById("rankPercent").textContent = data[1];
-        document.getElementById("rankHonor").textContent = data[2];
-      });
-    });
-
     document.querySelectorAll(".switch").forEach(sw => {
       sw.addEventListener("click", () => sw.classList.toggle("on"));
     });
@@ -1205,3 +1294,4 @@
   </script>
 </body>
 </html>
+
