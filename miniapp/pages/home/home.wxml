@@ -1,0 +1,70 @@
+<!-- 首页 - 学习打卡 -->
+<view class="nav-bar">
+  <text class="nav-title">学习打卡</text>
+</view>
+
+<scroll-view scroll-y class="screen">
+  <view class="page-kicker">今天 · {{todayLabel}}</view>
+  <view class="page-title">先完成今天，再谈长期。</view>
+  <view class="page-subtitle">快速查看学习状态，逐项勾选今日任务，统计数据会即时更新。</view>
+
+  <!-- 连续打卡 Hero -->
+  <view class="home-hero">
+    <view class="streak-line">
+      <text class="streak-num">{{streakDays}}</text>
+      <text class="streak-unit">天连续打卡</text>
+    </view>
+    <view class="hero-copy">{{heroCopy}}</view>
+  </view>
+
+  <!-- 三个指标卡片 -->
+  <view class="metric-grid">
+    <view class="metric-card">
+      <text class="metric-label">本周打卡率</text>
+      <text class="metric-value">{{weekRate}}%</text>
+    </view>
+    <view class="metric-card">
+      <text class="metric-label">本月打卡率</text>
+      <text class="metric-value">{{monthRate}}%</text>
+    </view>
+    <view class="metric-card">
+      <text class="metric-label">规律性排名</text>
+      <text class="metric-value">{{rankLabel}}</text>
+    </view>
+  </view>
+
+  <!-- 今日任务 -->
+  <view class="card pad mt">
+    <view class="section-title">今日任务</view>
+
+    <block wx:if="{{tasks.length > 0}}">
+      <view
+        wx:for="{{tasks}}"
+        wx:key="id"
+        class="task-row"
+      >
+        <view
+          class="check-box {{item.done ? 'done' : ''}}"
+          data-id="{{item.id}}"
+          data-done="{{item.done}}"
+          bindtap="toggleTask"
+        />
+        <view class="task-info-col">
+          <view class="task-title">{{item.name}}</view>
+          <view class="task-meta">{{item.timeTip}} · {{item.subject}}</view>
+        </view>
+        <view class="tag {{item.tagClass}}">{{item.tagLabel}}</view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="empty-state" style="padding:24px 0">
+        <text class="empty-desc">暂无今日任务，前往规划页创建</text>
+        <view class="primary mt14" bindtap="goPlanner" style="margin-top:14px">去创建任务</view>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<!-- Toast -->
+<view class="toast {{toastShow ? 'show' : ''}}">{{toastText}}</view>

@@ -1,0 +1,173 @@
+/* 日历页样式 */
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 10px;
+}
+
+.month-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.month-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ivory);
+  border: 1px solid var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--terracotta);
+}
+
+/* 日历网格 */
+.week-grid, .date-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.week-grid {
+  color: var(--stone);
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.week-item {
+  width: calc(100% / 7);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.date-btn {
+  width: calc(100% / 7);
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: rgba(250,249,245,.72);
+  border: 1px solid var(--cream);
+  color: var(--charcoal);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.date-btn.muted {
+  opacity: 0.35;
+}
+
+.date-btn.done {
+  background: var(--clay-soft);
+  border-color: rgba(201,100,66,.28);
+  color: var(--terracotta);
+  font-weight: 700;
+}
+
+.date-btn.missed {
+  background: var(--ink-soft);
+  border-style: dashed;
+  color: var(--olive);
+}
+
+.date-btn.rest {
+  background: var(--sand-soft);
+  color: var(--stone);
+}
+
+.date-btn.rest::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--stone);
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+}
+
+.date-btn.today {
+  background: var(--black);
+  color: var(--ivory);
+  font-weight: 700;
+}
+
+.date-btn.tomorrow {
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-weight: 700;
+}
+
+/* 图例 */
+.legend-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--olive);
+  font-size: 12px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.done-dot { background: var(--terracotta); }
+.missed-dot { background: var(--olive); }
+.rest-dot { background: var(--stone); }
+.today-dot { background: var(--black); }
+.tomorrow-dot { background: var(--sage); }
+
+/* 底部 Today/Tomorrow 卡片 */
+.bottom-cards {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.plan-card {
+  flex: 1;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--ivory);
+  border: 1px solid var(--cream);
+}
+
+.plan-card-label {
+  margin-bottom: 6px;
+}
+
+.plan-card-title {
+  font-weight: 600;
+  font-size: 15px;
+  display: block;
+}
+
+.plan-card-desc {
+  color: var(--olive);
+  font-size: 13px;
+  line-height: 1.45;
+  display: block;
+  margin-top: 4px;
+}

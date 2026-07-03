@@ -1,0 +1,92 @@
+<!-- 规划页 - AI 规划 -->
+<view class="nav-bar">
+  <text class="nav-title">AI 规划</text>
+</view>
+
+<scroll-view scroll-y class="screen">
+  <view class="page-kicker">智能计划</view>
+  <view class="page-title">把材料变成可执行的学习任务。</view>
+  <view class="page-subtitle">上传材料、粘贴目标，或手动添加自定义周期任务。</view>
+
+  <!-- AI 规划区 -->
+  <view class="card pad mt">
+    <view class="label-row">
+      <text class="field-label">学习材料 / 考试目标</text>
+      <picker range="{{learningModes}}" value="{{modeIndex}}" bindchange="onModeChange">
+        <view class="mode-picker">
+          <text>{{learningModes[modeIndex]}}</text>
+          <text class="mode-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+
+    <textarea
+      class="goal-input"
+      value="{{goalText}}"
+      placeholder="英语期末考试 30 天后开始，需要复习 Unit 1-4 单词、听力跟读和两套阅读训练。"
+      bindinput="onGoalInput"
+      maxlength="500"
+      auto-height
+    />
+
+    <view class="planner-actions">
+      <view class="icon-action" bindtap="uploadMaterial">+</view>
+      <view class="icon-action {{voiceActive ? 'voice recording' : 'voice'}}" bindtap="toggleVoice">
+        {{voiceActive ? '停' : '录'}}
+      </view>
+      <view class="primary flex-1" bindtap="generatePlan" style="flex:1">
+        {{loading ? 'AI 规划中...' : 'AI 规划'}}
+      </view>
+      <view class="secondary" bindtap="clearGoal">清空</view>
+    </view>
+  </view>
+
+  <!-- 自定义计划 -->
+  <view class="custom-plan card pad mt">
+    <view class="section-title" style="font-size:21px;margin-bottom:10px">自定义计划</view>
+
+    <view class="custom-grid">
+      <input class="custom-input" value="{{customName}}" placeholder="任务名称，如：整理作文素材" bindinput="onCustomName"/>
+      <input class="custom-input" value="{{customDuration}}" placeholder="30 分钟" bindinput="onCustomDuration"/>
+    </view>
+    <view class="custom-grid mt14">
+      <input class="custom-input" value="{{customSubject}}" placeholder="科目 / 标签" bindinput="onCustomSubject"/>
+    </view>
+
+    <!-- 重复周期 -->
+    <view class="repeat-box">
+      <view class="flex-between" style="margin-bottom:9px">
+        <text class="field-label" style="margin:0">打卡周期</text>
+        <view class="everyday-btn {{everyDay ? 'everyday-active' : ''}}" bindtap="toggleEveryDay">每天</view>
+      </view>
+      <view class="weekday-grid">
+        <view
+          wx:for="{{weekDays}}"
+          wx:key="index"
+          class="weekday-btn {{selectedDays[index] ? 'weekday-active' : ''}}"
+          data-idx="{{index}}"
+          bindtap="toggleDay"
+        >{{item}}</view>
+      </view>
+    </view>
+
+    <view class="dark mt14" bindtap="addCustomTask" style="width:100%">添加自定义任务</view>
+  </view>
+
+  <!-- 计划列表 -->
+  <view wx:if="{{planList.length > 0}}" class="card pad mt14">
+    <view class="section-title" style="font-size:22px;margin-bottom:8px">学习计划列表</view>
+    <text class="page-subtitle" style="margin-top:0;margin-bottom:12px">可编辑、删除任务；确认后会导入首页任务列表与日历推荐。</text>
+
+    <view wx:for="{{planList}}" wx:key="idx" class="generated-task">
+      <view class="step-no">{{index + 1}}</view>
+      <view class="gen-task-name" bindtap="editPlan" data-idx="{{index}}">{{item}}</view>
+      <view class="icon-btn" bindtap="removePlan" data-idx="{{index}}">×</view>
+    </view>
+
+    <view class="primary" bindtap="confirmPlan" style="width:100%;margin-top:14px">确认创建计划</view>
+  </view>
+</scroll-view>
+
+<!-- Toast -->
+<view class="toast {{toastShow ? 'show' : ''}}">{{toastText}}</view>

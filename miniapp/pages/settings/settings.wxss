@@ -1,0 +1,143 @@
+/* 设置页样式 */
+.setting-section-label {
+  color: var(--stone);
+  font-size: 12px;
+  margin: 22px 0 8px;
+  letter-spacing: .05em;
+}
+
+/* 登录按钮重置 */
+.profile-login-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  line-height: inherit;
+  font-size: inherit;
+}
+
+.profile-login-btn::after {
+  border: 0;
+}
+
+/* 个人信息行 */
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 头像 */
+.avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 20px;
+  background: var(--clay-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(201,100,66,.18);
+}
+
+.avatar-text {
+  color: var(--terracotta);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+/* 未登录头像样式 */
+.avatar-placeholder {
+  background: var(--sand);
+  border: 2px dashed var(--ring);
+  box-shadow: none;
+}
+
+.avatar-placeholder-icon {
+  color: var(--silver);
+  font-size: 24px;
+  font-weight: 300;
+}
+
+/* 未登录文字 */
+.profile-login-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--black);
+  display: block;
+}
+
+.profile-login-desc {
+  color: var(--stone);
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.login-arrow {
+  font-size: 28px;
+  color: var(--silver);
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+/* 已登录信息 */
+.profile-name {
+  font-weight: 600;
+  font-size: 15px;
+  display: block;
+}
+
+.profile-goal {
+  color: var(--stone);
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.35;
+  display: block;
+}
+
+.edit-tag {
+  flex-shrink: 0;
+}
+
+/* 设置项 */
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 4px 0;
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--cream);
+}
+
+.setting-title {
+  font-weight: 600;
+  font-size: 15px;
+  display: block;
+}
+
+.setting-desc {
+  color: var(--stone);
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.35;
+  display: block;
+}
+
+/* 小组 */
+.group-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.group-actions .secondary,
+.group-actions .dark {
+  flex: 1;
+  text-align: center;
+}

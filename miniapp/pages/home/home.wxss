@@ -1,0 +1,134 @@
+/* 连续打卡 Hero */
+.home-hero {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 28px;
+  background: linear-gradient(155deg, rgba(250,249,245,.98), rgba(232,230,220,.74));
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 装饰圆环 */
+.home-hero::after {
+  content: "";
+  position: absolute;
+  width: 132px;
+  height: 132px;
+  right: -42px;
+  top: -28px;
+  border: 1px solid rgba(201,100,66,.28);
+  border-radius: 45% 55% 50% 50%;
+  transform: rotate(-18deg);
+}
+
+.streak-line {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.streak-num {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 62px;
+  line-height: .9;
+  font-weight: 500;
+}
+
+.streak-unit {
+  color: var(--olive);
+  font-size: 14px;
+  margin-bottom: 7px;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  margin: 10px 0 0;
+  color: var(--olive);
+  line-height: 1.55;
+  font-size: 14px;
+  max-width: 250px;
+}
+
+/* 三指标卡片 */
+.metric-grid {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.metric-card {
+  flex: 1;
+  padding: 14px 10px;
+  border-radius: 16px;
+  background: var(--ivory);
+  border: 1px solid var(--cream);
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  color: var(--stone);
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+/* 任务行 */
+.task-row {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--cream);
+}
+
+.task-row:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.check-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--white);
+  transition: all .18s;
+}
+
+.check-box.done {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+}
+
+.task-info-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-meta {
+  color: var(--stone);
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.35;
+}

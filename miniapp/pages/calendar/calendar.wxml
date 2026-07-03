@@ -1,0 +1,94 @@
+<!-- 日历页 - 学习日历 -->
+<view class="nav-bar">
+  <text class="nav-title">学习日历</text>
+</view>
+
+<scroll-view scroll-y class="screen">
+  <view class="page-kicker">时间轨迹</view>
+  <view class="page-title">用颜色看见学习节奏。</view>
+  <view class="page-subtitle">点击未到日期会显示已安排的学习任务，而不是补打卡提示。</view>
+
+  <!-- 日历卡片 -->
+  <view class="card pad mt">
+    <view class="calendar-head">
+      <view class="month-title">{{monthTitle}}</view>
+      <view class="flex-row gap-10">
+        <text class="tag clay">完成率 {{completionRate}}%</text>
+        <view class="month-nav">
+          <view class="nav-btn" bindtap="prevMonth">‹</view>
+          <view class="nav-btn" bindtap="nextMonth">›</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 星期头 -->
+    <view class="week-grid">
+      <text class="week-item" wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this">{{item}}</text>
+    </view>
+
+    <!-- 日期网格 -->
+    <view class="date-grid">
+      <view
+        wx:for="{{cells}}"
+        wx:key="index"
+        class="{{item.cls}}"
+        data-date="{{item.date}}"
+        data-status="{{item.status}}"
+        bindtap="onDateTap"
+      >
+        <text wx:if="{{item.day}}">{{item.day}}</text>
+      </view>
+    </view>
+
+    <!-- 图例 -->
+    <view class="legend-row">
+      <view wx:for="{{legends}}" wx:key="text" class="legend-item">
+        <view class="legend-dot {{item.dotClass}}"></view>
+        <text>{{item.text}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 今日/明日推荐 -->
+  <view class="bottom-cards">
+    <view class="plan-card">
+      <view class="plan-card-label">
+        <text class="tag ink">今日任务</text>
+      </view>
+      <block wx:if="{{todayData}}">
+        <text class="plan-card-title">{{todayData.date_str}}</text>
+        <text class="plan-card-desc" wx:for="{{todayData.tasks}}" wx:key="index">
+          {{item.checked ? '✓' : '○'}} {{item.name}}
+        </text>
+      </block>
+      <block wx:else>
+        <text class="plan-card-desc" style="margin-top:8px">暂无任务安排</text>
+      </block>
+    </view>
+
+    <view class="plan-card">
+      <view class="plan-card-label">
+        <text class="tag sage">明日推荐</text>
+      </view>
+      <block wx:if="{{tomorrowData}}">
+        <text class="plan-card-title">{{tomorrowData.date_str}}</text>
+        <text class="plan-card-desc" wx:for="{{tomorrowData.tasks}}" wx:key="index">
+          ○ {{item.name}}
+        </text>
+      </block>
+      <block wx:else>
+        <text class="plan-card-desc" style="margin-top:8px">暂无任务安排</text>
+      </block>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 日期详情弹层 -->
+<view wx:if="{{sheetShow}}" class="sheet-overlay" bindtap="closeSheet" catchtouchmove="preventTouchMove">
+  <view class="sheet-panel" catchtap="preventTouchMove">
+    <view class="grabber"></view>
+    <view class="sheet-title">{{sheetTitle}}</view>
+    <view class="sheet-desc">{{sheetText}}</view>
+    <view class="primary" bindtap="closeSheet" style="width:100%">知道了</view>
+  </view>
+</view>

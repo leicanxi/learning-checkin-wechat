@@ -1,0 +1,52 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/calendar/calendar",
+    "pages/planner/planner",
+    "pages/stats/stats",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#f5f4ed"
+  },
+  "tabBar": {
+    "color": "#87867f",
+    "selectedColor": "#c96442",
+    "backgroundColor": "#faf9f5",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "assets/tab/home.png",
+        "selectedIconPath": "assets/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/calendar/calendar",
+        "text": "日历",
+        "iconPath": "assets/tab/calendar.png",
+        "selectedIconPath": "assets/tab/calendar-active.png"
+      },
+      {
+        "pagePath": "pages/planner/planner",
+        "text": "规划",
+        "iconPath": "assets/tab/planner.png",
+        "selectedIconPath": "assets/tab/planner-active.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计",
+        "iconPath": "assets/tab/stats.png",
+        "selectedIconPath": "assets/tab/stats-active.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "设置",
+        "iconPath": "assets/tab/settings.png",
+        "selectedIconPath": "assets/tab/settings-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json"
+}

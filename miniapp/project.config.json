@@ -1,8 +1,8 @@
 {
-  "miniprogramRoot": "dist/",
+  "miniprogramRoot": "",
   "projectname": "learning-checkin",
   "description": "学习打卡追踪器",
-  "appid": "wx_test_appid",
+  "appid": "wxaa135c91a39e2247",
   "setting": {
     "urlCheck": false,
     "es6": true,
@@ -30,7 +30,17 @@
       "disablePlugins": [],
       "outputPath": ""
     },
-    "condition": false
+    "condition": false,
+    "compileWorklet": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "swc": false,
+    "disableSWC": true
   },
   "compileType": "miniprogram",
   "libVersion": "3.3.4",
@@ -41,5 +51,6 @@
   "editorSetting": {
     "tabIndent": "insertSpaces",
     "tabSize": 2
-  }
+  },
+  "simulatorPluginLibVersion": {}
 }

@@ -1,0 +1,126 @@
+<!-- 统计页 - 数据与排行 -->
+<view class="nav-bar">
+  <text class="nav-title">学习统计</text>
+</view>
+
+<scroll-view scroll-y class="screen">
+  <view class="page-kicker">数据与排行</view>
+  <view class="page-title">看见进步，也看见位置。</view>
+  <view class="page-subtitle">统计页合并排行榜：先看学习趋势，再查看小组与全局排名。</view>
+
+  <!-- 周/月/年切换 -->
+  <view class="segmented">
+    <view wx:for="{{periods}}" wx:key="*this" class="seg-btn {{activePeriod === item ? 'active' : ''}}" data-period="{{item}}" bindtap="switchPeriod">{{item}}</view>
+  </view>
+
+  <!-- 趋势折线图 -->
+  <view class="card pad mt">
+    <view class="flex-between" style="margin-bottom:8px">
+      <text class="section-title" style="margin:0">{{trendTitle}}</text>
+      <text class="tag quiet">{{trendTag}}</text>
+    </view>
+    <canvas
+      type="2d"
+      id="trendCanvas"
+      class="chart-canvas"
+      style="width:100%;height:160px"
+    ></canvas>
+    <!-- 降级方案：柱状图 -->
+    <view class="bar-fallback">
+      <view wx:for="{{trendData}}" wx:key="idx" class="bar-col">
+        <text class="bar-val">{{item.count}}</text>
+        <view class="bar" style="height:{{getBarHeight(item.count)}}px"></view>
+        <text class="bar-label">{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 环形进度 -->
+  <view class="ring-grid">
+    <view wx:for="{{masteryData}}" wx:key="idx" class="ring-card">
+      <view class="progress-ring" style="background: conic-gradient({{item.bgColor}} {{item.progress}}%, var(--sand) {{item.progress}}%)">
+        <view class="ring-inner">{{item.progress}}%</view>
+      </view>
+      <view>
+        <text class="ring-subject">{{item.subject}}</text>
+        <text class="ring-note">{{item.note}}</text>
+      </view>
+    </view>
+    <block wx:if="{{masteryData.length === 0}}">
+      <view class="ring-card" style="grid-column:1/-1;justify-content:center">
+        <text class="empty-desc">暂无掌握数据</text>
+      </view>
+    </block>
+  </view>
+
+  <!-- 累计完成打卡 深色卡片 -->
+  <view class="completion-card">
+    <text class="completion-label">累计完成打卡</text>
+    <text class="completion-num">{{completedCount}}</text>
+    <text class="completion-desc">{{completionCopy}}</text>
+  </view>
+
+  <!-- 科目打卡分布 -->
+  <view class="card pad mt">
+    <view class="section-title">科目打卡分布</view>
+    <view wx:if="{{subjectData.length > 0}}" class="subject-list">
+      <view wx:for="{{subjectData}}" wx:key="idx" class="subject-row">
+        <text class="subject-name">{{item.subject}}</text>
+        <view class="track">
+          <view class="fill" style="width:{{item.percentage}}%;{{item.percentage < 50 ? 'background:var(--sage)' : ''}}"></view>
+        </view>
+        <text class="subject-val">{{item.percentage}}%</text>
+      </view>
+    </view>
+    <view wx:else class="empty-state" style="padding:24px 0">
+      <text class="empty-desc">暂无科目数据</text>
+    </view>
+  </view>
+
+  <!-- 排名 Hero -->
+  <view class="rank-hero mt">
+    <view class="rank-label-row">
+      <text class="rank-scope-label">{{rankScopeLabel}}</text>
+      <view class="info-btn" bindtap="showRankInfo">i</view>
+    </view>
+    <text class="rank-percent">{{rankPercent}}</text>
+    <text class="rank-honor">{{rankHonor}}</text>
+  </view>
+
+  <!-- 小组/全局 切换 -->
+  <view class="segmented two">
+    <view wx:for="{{rankScopes}}" wx:key="*this" class="seg-btn {{activeRankScope === item ? 'active' : ''}}" data-scope="{{item}}" bindtap="switchRankScope">{{item}}</view>
+  </view>
+
+  <!-- 徽章墙 -->
+  <view class="card pad mt">
+    <view class="badge-head">
+      <text class="section-title" style="margin:0">徽章墙</text>
+      <view class="secondary badge-toggle" bindtap="toggleBadges" style="min-height:32px;padding:0 12px;font-size:12px">
+        {{badgesExpanded ? '收起' : '展开全部'}}
+      </view>
+    </view>
+    <view class="badge-grid">
+      <view wx:for="{{displayBadges}}" wx:key="idx" class="badge-item">
+        <view class="badge-icon">{{item.icon}}</view>
+        <text class="badge-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 排名区间说明弹层 -->
+<view wx:if="{{rankInfoShow}}" class="sheet-overlay" bindtap="closeRankInfo" catchtouchmove="preventTouchMove">
+  <view class="sheet-panel" catchtap="preventTouchMove">
+    <view class="grabber"></view>
+    <view class="sheet-title">排名区间说明</view>
+    <view class="sheet-desc">系统按打卡完成率、连续性、任务稳定度综合计算，只展示区间，不公开具体学习内容。</view>
+    <view class="sheet-list">
+      <view wx:for="{{tiers}}" wx:key="idx" class="sheet-item">
+        <text class="sheet-item-title">{{item.title}}</text>
+        <text class="sheet-item-desc">{{item.desc}}</text>
+      </view>
+    </view>
+    <view class="primary" bindtap="closeRankInfo" style="width:100%">知道了</view>
+  </view>
+</view>

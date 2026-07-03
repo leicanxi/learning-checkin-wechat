@@ -1,0 +1,114 @@
+<!-- 设置页 - 偏好与配置 -->
+<view class="nav-bar">
+  <text class="nav-title">设置</text>
+</view>
+
+<scroll-view scroll-y class="screen">
+  <view class="page-kicker">偏好与配置</view>
+  <view class="page-title">让小程序配合你的学习方式。</view>
+  <view class="page-subtitle">管理个人资料、小组、提醒与账号状态。</view>
+
+  <!-- 个人信息 / 登录入口 -->
+  <view class="setting-section-label">个人信息</view>
+  <view class="card pad profile-card">
+    <button wx:if="{{!isLogin}}" class="profile-login-btn" open-type="getUserProfile" bindgetuserprofile="onLogin">
+      <view class="profile-row">
+        <view class="avatar avatar-placeholder">
+          <text class="avatar-placeholder-icon">+</text>
+        </view>
+        <view class="flex-1">
+          <text class="profile-login-title">点击头像登录</text>
+          <text class="profile-login-desc">登录后可同步学习数据</text>
+        </view>
+        <text class="login-arrow">›</text>
+      </view>
+    </button>
+    <view wx:else class="profile-row">
+      <view class="avatar">
+        <text class="avatar-text">{{avatarText}}</text>
+      </view>
+      <view class="flex-1">
+        <text class="profile-name">{{nickname}}</text>
+        <text class="profile-goal">{{learningGoal}}</text>
+      </view>
+      <text class="tag edit-tag" bindtap="editProfile">编辑</text>
+    </view>
+  </view>
+
+  <!-- 提醒设置 -->
+  <view class="setting-section-label">提醒设置</view>
+  <view class="card pad">
+    <view class="setting-item">
+      <view class="flex-1">
+        <text class="setting-title">每日打卡提醒</text>
+        <text class="setting-desc">{{reminderTime}} 发送服务通知</text>
+      </view>
+      <view class="switch-wrap {{dailyCheckin ? 'on' : ''}}" bindtap="toggleDailyCheckin">
+        <view class="switch-thumb"></view>
+      </view>
+    </view>
+    <view class="setting-divider"></view>
+    <view class="setting-item">
+      <view class="flex-1">
+        <text class="setting-title">任务到期通知</text>
+        <text class="setting-desc">截止前 30 分钟提醒</text>
+      </view>
+      <view class="switch-wrap {{taskDeadline ? 'on' : ''}}" bindtap="toggleTaskDeadline">
+        <view class="switch-thumb"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 小组设置 -->
+  <view class="setting-section-label">小组设置</view>
+  <view class="card pad">
+    <block wx:if="{{groupName}}">
+      <view class="tag sage" style="margin-bottom:6px">当前小组</view>
+      <view class="section-title" style="margin:4px 0;font-size:20px">{{groupName}}</view>
+      <text class="text-muted">{{groupInfo}}</text>
+      <view class="group-actions mt14">
+        <view class="secondary flex-1" bindtap="joinGroup">加入小组</view>
+        <view class="dark flex-1" bindtap="manageGroup">管理小组</view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="flex-between">
+        <text class="setting-title">尚未加入小组</text>
+      </view>
+      <view class="group-actions mt14">
+        <view class="secondary flex-1" bindtap="joinGroup">加入小组</view>
+        <view class="dark flex-1" bindtap="manageGroup">管理小组</view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 其他 -->
+  <view class="setting-section-label">其他</view>
+  <view class="card pad">
+    <view class="setting-item" bindtap="exportPDF">
+      <view class="flex-1">
+        <text class="setting-title">导出学习报告</text>
+        <text class="setting-desc">生成 PDF 学习报告，便于提交给老师或复盘。</text>
+      </view>
+      <text class="tag">导出</text>
+    </view>
+    <view class="setting-divider"></view>
+    <view class="setting-item" bindtap="showAbout">
+      <view class="flex-1">
+        <text class="setting-title">关于应用</text>
+        <text class="setting-desc">版本 1.0.0 · 学习打卡助手</text>
+      </view>
+      <text class="tag">查看</text>
+    </view>
+    <view wx:if="{{isLogin}}" class="setting-divider"></view>
+    <view wx:if="{{isLogin}}" class="setting-item" bindtap="handleLogout">
+      <view class="flex-1">
+        <text class="setting-title" style="color:var(--error)">退出登录</text>
+        <text class="setting-desc">退出当前微信授权状态</text>
+      </view>
+      <text class="tag" style="color:var(--error)">退出</text>
+    </view>
+  </view>
+
+  <view style="height:40px"></view>
+</scroll-view>
