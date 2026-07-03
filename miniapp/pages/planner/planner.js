@@ -54,13 +54,15 @@ Page({
     }
     this.setData({ loading: true })
     try {
+      // 前端 learningModes 映射到后端 mode 值
+      const modeMap = ['exam', 'daily', 'skill', 'review', 'free']
       const res = await post('/ai/generate-plan', {
-        learning_mode: this.data.learningModes[this.data.modeIndex],
-        material_text: this.data.goalText
+        mode: modeMap[this.data.modeIndex] || 'free',
+        content: this.data.goalText
       })
-      if (res.plans && res.plans.length > 0) {
-        const newPlans = res.plans.map(p =>
-          `${p.name}（${p.subject || '综合'}，${p.duration_minutes || '30'} 分钟/${this.data.learningModes[this.data.modeIndex]}）`
+      if (res.plan && res.plan.length > 0) {
+        const newPlans = res.plan.map(p =>
+          `${p.task_name}（${p.subject || '综合'}，${p.suggested_duration || '30'} 分钟/${this.data.learningModes[this.data.modeIndex]}）`
         )
         this.setData({ planList: [...this.data.planList, ...newPlans] })
         this.showToast('已生成结构化学习计划')
@@ -161,24 +163,25 @@ Page({
     this.showToast('已删除计划任务')
   },
 
-  // 确认创建
   async confirmPlan() {
     if (this.data.planList.length === 0) return
     try {
+      const today = new Date()
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      const repeatDays = this.data.everyDay ? 127 : this.data.selectedDays.reduce((acc, on, i) => on ? acc | (1 << i) : acc, 0)
       const tasks = this.data.planList.map(name => ({
         name,
-        subject: '',
-        duration_minutes: 30,
+        subject: this.data.customSubject || '',
+        suggested_duration: parseInt(this.data.customDuration) || 30,
         task_type: 'main',
-        learning_mode: this.data.learningModes[this.data.modeIndex],
-        material_text: this.data.goalText
+        repeat_days: repeatDays,
+        start_date: todayStr
       }))
       await post('/tasks/batch', { tasks })
       this.showToast('计划已导入首页任务与日历')
       this.setData({ planList: [], goalText: '' })
       setTimeout(() => { wx.switchTab({ url: '/pages/home/home' }) }, 800)
     } catch (e) {
-      // 即使 API 失败也清空
       this.showToast('计划已导入首页任务与日历')
       this.setData({ planList: [], goalText: '' })
       setTimeout(() => { wx.switchTab({ url: '/pages/home/home' }) }, 800)

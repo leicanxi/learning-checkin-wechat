@@ -44,12 +44,12 @@ Page({
   async loadAll() {
     try {
       const [stats, ranking] = await Promise.all([
-        get('/stats/summary', { period: this.getPeriodKey() }).catch(() => null),
-        get('/ranking/me', { dimension: this.data.activeRankScope === '全局' ? 'global' : 'group' }).catch(() => null)
+        get('/stats/', { period: this.getPeriodKey() }).catch(() => null),
+        get('/ranking/me', { scope: this.data.activeRankScope === '全局' ? 'global' : 'group' }).catch(() => null)
       ])
 
-      // 趋势数据
-      const trend = (stats && stats.weekly_trend) ? stats.weekly_trend : []
+      // 趋势数据 —— 后端字段 checkin_trend
+      const trend = (stats && stats.checkin_trend) ? stats.checkin_trend : []
       const trendData = trend.slice(-7).map(item => {
         const parts = item.date.split('-')
         return {
@@ -58,8 +58,17 @@ Page({
         }
       })
 
-      // 掌握进度
-      const mastery = (stats && stats.mastery_progress) ? stats.mastery_progress : []
+      // 掌握进度 —— 后端字段 knowledge_progress（可能是 dict 或 array）
+      const rawKp = (stats && stats.knowledge_progress) ? stats.knowledge_progress : {}
+      let mastery
+      if (Array.isArray(rawKp)) {
+        mastery = rawKp
+      } else {
+        mastery = Object.entries(rawKp).map(([subject, progress]) => {
+          const pct = typeof progress === 'number' ? (progress > 1 ? progress : Math.round(progress * 100)) : 0
+          return { subject, progress: pct, note: '' }
+        })
+      }
       const colors = ['var(--terracotta)', 'var(--sage)', '#d4a853', '#4d4c48']
       const masteryData = mastery.slice(0, 2).map((m, i) => ({
         subject: m.subject,
@@ -82,7 +91,7 @@ Page({
           percentage: Math.round(s.percentage || 0)
         })),
         rankPercent: ranking ? ranking.rank_range : '--',
-        rankHonor: ranking ? ranking.description : '加载中...',
+        rankHonor: ranking ? (ranking.rank_range_label || ranking.rank_title || '加载中...') : '加载中...',
         displayBadges: this.data.allBadges.slice(0, 3)
       })
 

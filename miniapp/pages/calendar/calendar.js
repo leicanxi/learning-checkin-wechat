@@ -40,8 +40,10 @@ Page({
         get('/calendar/today').catch(() => null),
         get('/calendar/tomorrow').catch(() => null)
       ])
-      const monthData = (monthRes && monthRes.days) ? monthRes.days : {}
-      this.buildCells(monthData)
+      const datesArr = (monthRes && monthRes.dates) ? monthRes.dates : []
+      const monthData = {}
+      datesArr.forEach(d => { monthData[d.date] = d })
+      this.buildCells(monthData, monthRes && monthRes.monthly_completion_rate)
       this.setData({
         todayData: todayRes || null,
         tomorrowData: tomorrowRes || null
@@ -51,7 +53,7 @@ Page({
     }
   },
 
-  buildCells(monthData) {
+  buildCells(monthData, backendRate) {
     const { year, month } = this.data
     const firstDay = new Date(year, month - 1, 1)
     const lastDay = new Date(year, month, 0)
@@ -78,28 +80,41 @@ Page({
       let cls = 'date-btn'
       let status = ''
 
-      if (ds === todayStr) {
-        cls += ' today'
-        status = '今日'
-      } else if (ds === tomorrowStr) {
-        cls += ' tomorrow'
-        status = '明日推荐'
-      } else if (dow === 0 || dow === 6) {
-        cls += ' rest'
-        status = '休息日'
-      } else if (dayData) {
-        const allDone = dayData.tasks && dayData.tasks.every(t => t.checked)
-        cls += allDone ? ' done' : ' missed'
-        status = allDone ? '已打卡' : '未打卡'
-      } else if (ds < todayStr) {
-        cls += ' missed'
-        status = '未打卡'
+      // 用后端返回的 status 字段判断
+      if (dayData) {
+        switch (dayData.status) {
+          case 'checked_in':
+            cls += ' done'; status = '已打卡'; break
+          case 'missed':
+            cls += ' missed'; status = '未打卡'; break
+          case 'rest_suggested':
+            cls += ' rest'; status = '休息日'; break
+          case 'today':
+            cls += ' today'; status = '今日'; break
+          case 'tomorrow_suggested':
+            cls += ' tomorrow'; status = '明日推荐'; break
+          default:
+            cls += ' missed'; status = '未打卡'
+        }
+      } else {
+        // 无数据时用日期规则推断
+        if (ds === todayStr) {
+          cls += ' today'; status = '今日'
+        } else if (ds === tomorrowStr) {
+          cls += ' tomorrow'; status = '明日推荐'
+        } else if (dow === 0 || dow === 6) {
+          cls += ' rest'; status = '休息日'
+        } else if (ds < todayStr) {
+          cls += ' missed'; status = '未打卡'
+        }
       }
 
       cells.push({ day: d, muted: false, cls, status, date: ds })
     }
 
-    this.setData({ cells, completionRate: this.calcRate(cells) })
+    // 优先用后端的完成率
+    const rate = backendRate != null ? Math.round(backendRate) : this.calcRate(cells)
+    this.setData({ cells, completionRate: rate })
   },
 
   calcRate(cells) {

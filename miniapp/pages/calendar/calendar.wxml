@@ -56,9 +56,9 @@
         <text class="tag ink">今日任务</text>
       </view>
       <block wx:if="{{todayData}}">
-        <text class="plan-card-title">{{todayData.date_str}}</text>
+        <text class="plan-card-title">{{todayData.date}}</text>
         <text class="plan-card-desc" wx:for="{{todayData.tasks}}" wx:key="index">
-          {{item.checked ? '✓' : '○'}} {{item.name}}
+          {{item.completed ? '✓' : '○'}} {{item.name}}
         </text>
       </block>
       <block wx:else>
@@ -71,9 +71,9 @@
         <text class="tag sage">明日推荐</text>
       </view>
       <block wx:if="{{tomorrowData}}">
-        <text class="plan-card-title">{{tomorrowData.date_str}}</text>
-        <text class="plan-card-desc" wx:for="{{tomorrowData.tasks}}" wx:key="index">
-          ○ {{item.name}}
+        <text class="plan-card-title">{{tomorrowData.date}}</text>
+        <text class="plan-card-desc" wx:for="{{tomorrowData.recommended_tasks}}" wx:key="index">
+          ○ {{item.task_name}}
         </text>
       </block>
       <block wx:else>

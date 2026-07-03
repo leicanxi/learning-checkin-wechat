@@ -102,10 +102,14 @@ Page({
   async loadReminderSettings() {
     try {
       const res = await get('/settings/reminder')
+      const enabled = !!res.reminder_enabled
+      const timeStr = enabled && res.reminder_time
+        ? (typeof res.reminder_time === 'string' ? res.reminder_time.slice(0, 5) : '21:00')
+        : '--'
       this.setData({
-        dailyCheckin: !!res.daily_checkin,
-        taskDeadline: !!res.task_deadline,
-        reminderTime: res.daily_checkin ? '21:10' : '--'
+        dailyCheckin: enabled,
+        taskDeadline: !!res.task_expire_notify,
+        reminderTime: timeStr
       })
     } catch (e) {
       // 使用默认值
@@ -115,9 +119,10 @@ Page({
   async loadGroupInfo() {
     try {
       const res = await get('/groups/my')
+      const group = res.group || res
       this.setData({
-        groupName: res.name || '',
-        groupInfo: `${res.member_count || 0} 名成员 · 本周完成率 ${res.completion_rate || 0}%`
+        groupName: group.name || '',
+        groupInfo: `${group.member_count || 0} 名成员 · 本周完成率 ${group.completion_rate || 0}%`
       })
     } catch (e) {
       // 未加入小组
@@ -132,7 +137,7 @@ Page({
       success: async (res) => {
         if (res.confirm && res.content) {
           try {
-            await put('/users/me', { learning_goal: res.content })
+            await put('/auth/me', { learning_goal: res.content })
             this.setData({ learningGoal: res.content })
             const userInfo = wx.getStorageSync('userInfo') || {}
             userInfo.learning_goal = res.content
