@@ -106,6 +106,9 @@
         <text class="badge-name">{{item.name}}</text>
       </view>
     </view>
+    <view wx:if="{{displayBadges.length === 0}}" class="empty-state" style="padding:24px 0">
+      <text class="empty-desc">暂无已获得徽章</text>
+    </view>
   </view>
 </scroll-view>
 

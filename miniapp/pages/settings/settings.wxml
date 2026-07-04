@@ -133,6 +133,9 @@
         <view class="flex-1">
           <text class="member-name">{{item.nickname}} {{item.role === 'owner' ? '· 组长' : ''}}</text>
           <text class="member-meta">本周 {{item.weekly_completion_rate}}% · {{item.rank_range_label}}</text>
+          <view wx:if="{{item.badges && item.badges.length > 0}}" class="member-badges">
+            <text wx:for="{{item.badges}}" wx:key="id" class="member-badge">{{item.icon_css || '勋'}} {{item.name}}</text>
+          </view>
         </view>
         <view
           wx:if="{{groupSheetMode === 'manage' && item.role !== 'owner'}}"

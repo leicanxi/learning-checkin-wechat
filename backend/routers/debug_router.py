@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Checkin, Group, Task, User, UserGroup
+from models import Badge, Checkin, Group, Task, User, UserBadge, UserGroup
 
 router = APIRouter(prefix="/debug", tags=["临时调试后台"])
 
@@ -196,6 +196,74 @@ async def get_debug_user_group(user_id: int, db: Session = Depends(get_db)):
 async def list_debug_groups(db: Session = Depends(get_db)):
     groups = db.query(Group).order_by(Group.created_at.desc()).limit(100).all()
     return [serialize_group(db, group) for group in groups]
+
+
+@router.get("/api/badges")
+async def list_debug_badges(db: Session = Depends(get_db)):
+    badges = db.query(Badge).order_by(Badge.type.asc(), Badge.id.asc()).all()
+    return [
+        {
+            "id": badge.id,
+            "name": badge.name,
+            "description": badge.description or "",
+            "type": badge.type,
+            "icon_css": badge.icon_css or "",
+        }
+        for badge in badges
+    ]
+
+
+@router.get("/api/users/{user_id}/badges")
+async def list_debug_user_badges(user_id: int, db: Session = Depends(get_db)):
+    rows = (
+        db.query(UserBadge, Badge)
+        .join(Badge, Badge.id == UserBadge.badge_id)
+        .filter(UserBadge.user_id == user_id)
+        .order_by(UserBadge.earned_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": badge.id,
+            "name": badge.name,
+            "type": badge.type,
+            "icon_css": badge.icon_css or "",
+            "earned_at": user_badge.earned_at.isoformat() if user_badge.earned_at else "",
+        }
+        for user_badge, badge in rows
+    ]
+
+
+@router.post("/api/users/{user_id}/badges/{badge_id}")
+async def grant_debug_badge(user_id: int, badge_id: int, db: Session = Depends(get_db)):
+    if not db.query(User).filter(User.id == user_id).first():
+        raise HTTPException(status_code=404, detail="user not found")
+    if not db.query(Badge).filter(Badge.id == badge_id).first():
+        raise HTTPException(status_code=404, detail="badge not found")
+    existing = (
+        db.query(UserBadge)
+        .filter(UserBadge.user_id == user_id, UserBadge.badge_id == badge_id)
+        .first()
+    )
+    if not existing:
+        db.add(UserBadge(user_id=user_id, badge_id=badge_id))
+        db.commit()
+    return {"ok": True}
+
+
+@router.post("/api/users/{user_id}/exclusive-badges")
+async def grant_debug_exclusive_badges(user_id: int, db: Session = Depends(get_db)):
+    badges = db.query(Badge).filter(Badge.type == "exclusive").all()
+    for badge in badges:
+        existing = (
+            db.query(UserBadge)
+            .filter(UserBadge.user_id == user_id, UserBadge.badge_id == badge.id)
+            .first()
+        )
+        if not existing:
+            db.add(UserBadge(user_id=user_id, badge_id=badge.id))
+    db.commit()
+    return {"granted_count": len(badges)}
 
 
 @router.post("/api/groups")
@@ -495,6 +563,16 @@ DEBUG_TASKS_HTML = """
   </div>
 
   <div class="panel">
+    <div class="section-title">徽章调试</div>
+    <div id="userBadges" class="group-box muted">未加载</div>
+    <div class="row">
+      <select id="badgeSelect"></select>
+      <button onclick="grantSelectedBadge()">授予选中徽章</button>
+      <button onclick="grantExclusiveBadges()">授予测试号专属徽章</button>
+    </div>
+  </div>
+
+  <div class="panel">
     <div class="section-title">任务调试</div>
     <div class="row">
       <input id="taskName" placeholder="任务名" value="背单词" />
@@ -558,6 +636,8 @@ DEBUG_TASKS_HTML = """
     function onUserChange() {
       loadTasks()
       loadUserGroup()
+      loadBadges()
+      loadUserBadges()
     }
 
     async function createUser() {
@@ -625,6 +705,35 @@ DEBUG_TASKS_HTML = """
       await api(`/debug/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' })
       await loadUserGroup()
       show('已移除小组成员')
+    }
+
+    async function loadBadges() {
+      const badges = await api('/debug/api/badges')
+      $('badgeSelect').innerHTML = badges.map(b => `<option value="${b.id}">#${b.id} ${escapeHtml(b.name)} (${b.type})</option>`).join('')
+    }
+
+    async function loadUserBadges() {
+      if (!selectedUserId()) return
+      const badges = await api(`/debug/api/users/${selectedUserId()}/badges`)
+      if (!badges.length) {
+        $('userBadges').className = 'group-box muted'
+        $('userBadges').innerHTML = '当前用户暂无已获得徽章'
+        return
+      }
+      $('userBadges').className = 'group-box'
+      $('userBadges').innerHTML = badges.map(b => `<span class="member-chip">${escapeHtml(b.icon_css || '勋')} ${escapeHtml(b.name)} · ${b.type}</span>`).join('')
+    }
+
+    async function grantSelectedBadge() {
+      await api(`/debug/api/users/${selectedUserId()}/badges/${$('badgeSelect').value}`, { method: 'POST' })
+      await loadUserBadges()
+      show('已授予徽章')
+    }
+
+    async function grantExclusiveBadges() {
+      await api(`/debug/api/users/${selectedUserId()}/exclusive-badges`, { method: 'POST' })
+      await loadUserBadges()
+      show('已授予测试号专属徽章')
     }
 
     async function loadTasks() {

@@ -199,3 +199,21 @@
   margin-top: 3px;
   display: block;
 }
+
+.member-badges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+
+.member-badge {
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--clay-soft);
+  color: var(--terracotta);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+}

@@ -29,20 +29,28 @@ DEFAULT_BADGES = [
     {"name": "晚间专注", "description": "晚上19-23点打卡30次", "type": "achievement", "threshold": 30, "icon_css": ""},
     {"name": "小组贡献", "description": "小组完成率≥80%", "type": "achievement", "threshold": 0.8, "icon_css": ""},
     {"name": "新计划创建", "description": "创建首个AI学习计划", "type": "achievement", "threshold": 1, "icon_css": ""},
+    {"name": "内测体验官", "description": "参与小程序内测并协助打磨体验", "type": "exclusive", "threshold": None, "icon_css": "测"},
+    {"name": "共创先锋", "description": "为产品字段和流程设计提供关键反馈", "type": "exclusive", "threshold": None, "icon_css": "创"},
+    {"name": "首席试学官", "description": "专属测试账号徽章，用于展示内测身份", "type": "exclusive", "threshold": None, "icon_css": "试"},
 ]
 
 
 def init_badges():
-    """初始化 10 个徽章到 badges 表（幂等）"""
+    """初始化默认徽章到 badges 表（幂等，补齐新增徽章）"""
     db = SessionLocal()
     try:
         existing_count = db.query(Badge).count()
-        if existing_count == 0:
-            for badge_data in DEFAULT_BADGES:
-                badge = Badge(**badge_data)
-                db.add(badge)
+        existing_names = {row.name for row in db.query(Badge.name).all()}
+        created_count = 0
+        for badge_data in DEFAULT_BADGES:
+            if badge_data["name"] in existing_names:
+                continue
+            badge = Badge(**badge_data)
+            db.add(badge)
+            created_count += 1
+        if created_count:
             db.commit()
-            print(f"[Init] 已创建 {len(DEFAULT_BADGES)} 个徽章")
+            print(f"[Init] 已补充 {created_count} 个徽章")
         else:
             print(f"[Init] 徽章表已有 {existing_count} 条记录，跳过初始化")
     finally:

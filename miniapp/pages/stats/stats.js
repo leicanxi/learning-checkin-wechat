@@ -19,17 +19,7 @@ Page({
     rankInfoShow: false,
     badgesExpanded: false,
     displayBadges: [],
-    allBadges: [
-      { icon: '稳', name: '规律达人' },
-      { icon: '进', name: '进步之星' },
-      { icon: '7', name: '七日连续' },
-      { icon: '英', name: '英语坚持' },
-      { icon: '复', name: '错题复盘' },
-      { icon: '早', name: '早起学习' },
-      { icon: '夜', name: '晚间专注' },
-      { icon: '组', name: '小组贡献' },
-      { icon: '新', name: '新计划创建' }
-    ],
+    allBadges: [],
     tiers: [
       { title: '前 20% · 规律达人', desc: '连续性稳定，完成率高，适合作为小组榜样。' },
       { title: '20–60% · 习惯养成者', desc: '已有基础节奏，建议减少周末或考试前后的中断。' },
@@ -44,9 +34,10 @@ Page({
   async loadAll() {
     try {
       const isGlobalScope = this.data.activeRankScope === '全局'
-      const [stats, ranking] = await Promise.all([
+      const [stats, ranking, badges] = await Promise.all([
         get('/stats/', { period: this.getPeriodKey() }).catch(() => null),
-        get('/ranking/me', { scope: isGlobalScope ? 'global' : 'group' }).catch(() => null)
+        get('/ranking/me', { scope: isGlobalScope ? 'global' : 'group' }).catch(() => null),
+        get('/badges/me').catch(() => [])
       ])
 
       // 趋势数据 —— 后端字段 checkin_trend
@@ -80,6 +71,14 @@ Page({
 
       // 科目分布
       const subjects = (stats && stats.subject_distribution) ? stats.subject_distribution : []
+      const earnedBadges = (badges || [])
+        .filter(b => b.earned)
+        .map(b => ({
+          id: b.id,
+          icon: b.icon_css || (b.name || '?').slice(0, 1),
+          name: b.name,
+          earned_at: b.earned_at || ''
+        }))
 
       this.setData({
         trendData,
@@ -94,7 +93,8 @@ Page({
         rankScopeLabel: isGlobalScope ? '全局排名区间' : '小组排名区间',
         rankPercent: ranking ? (ranking.rank_range_label || '--') : '--',
         rankHonor: ranking ? (ranking.rank_title || '加载中...') : '加载中...',
-        displayBadges: this.data.allBadges.slice(0, 3)
+        allBadges: earnedBadges,
+        displayBadges: earnedBadges.slice(0, 3)
       })
 
       // 绘制折线图
@@ -145,7 +145,9 @@ Page({
         { subject: '物理', percentage: 46 }
       ],
       rankPercent: '前 20%',
-      rankHonor: '你已获得「规律达人」称号，最近 7 天有 5 天按计划完成。'
+      rankHonor: '你已获得「规律达人」称号，最近 7 天有 5 天按计划完成。',
+      allBadges: [],
+      displayBadges: []
     })
     if (trendData.length > 0) {
       this.drawTrendChart(trendData)

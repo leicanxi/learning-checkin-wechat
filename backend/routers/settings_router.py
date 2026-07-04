@@ -8,11 +8,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from database import get_db
-from models import User, Checkin, Group, UserGroup, Task
+from models import User, Checkin, Group, UserGroup, Task, Badge, UserBadge
 from schemas import (
     ReminderSettings, GroupOut, MyGroupResponse,
     CreateGroupRequest, JoinGroupRequest, UpdateGroupRequest,
-    GroupMemberOut,
+    GroupMemberOut, BadgeSummary,
 )
 from auth import get_current_user
 from routers.ranking_router import calculate_regularity_score, determine_rank_range, RANK_LABELS
@@ -78,6 +78,27 @@ def group_rank_for_user(user_id: int, member_ids: list[int], db: Session) -> tup
     valid_scores = [score for score in scores if score >= 0]
     rank_range = determine_rank_range(valid_scores, user_score)
     return rank_range, RANK_LABELS.get(rank_range, "数据不足")
+
+
+def user_badge_summaries(user_id: int, db: Session, limit: int = 3) -> list[BadgeSummary]:
+    rows = (
+        db.query(UserBadge, Badge)
+        .join(Badge, Badge.id == UserBadge.badge_id)
+        .filter(UserBadge.user_id == user_id)
+        .order_by(UserBadge.earned_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        BadgeSummary(
+            id=badge.id,
+            name=badge.name,
+            type=badge.type,
+            icon_css=badge.icon_css or "",
+            earned_at=user_badge.earned_at,
+        )
+        for user_badge, badge in rows
+    ]
 
 
 def build_group_out(group: Group, db: Session, include_invite: bool = False) -> GroupOut:
@@ -388,6 +409,7 @@ async def list_group_members(
             rank_range=rank_range,
             rank_range_label=RANK_LABELS.get(rank_range, "数据不足"),
             joined_at=membership.joined_at,
+            badges=user_badge_summaries(member.id, db),
         ))
     return result
 

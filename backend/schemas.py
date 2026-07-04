@@ -266,6 +266,15 @@ class BadgeOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BadgeSummary(BaseModel):
+    """公开展示用徽章摘要"""
+    id: int
+    name: str
+    type: str
+    icon_css: str = ""
+    earned_at: Optional[datetime] = None
+
+
 # =============================================================================
 # 日历服务
 # =============================================================================
@@ -363,6 +372,7 @@ class GroupMemberOut(BaseModel):
     rank_range: str = "insufficient"
     rank_range_label: str = "数据不足"
     joined_at: Optional[datetime] = None
+    badges: List[BadgeSummary] = Field(default_factory=list)
 
 
 class MyGroupResponse(BaseModel):
