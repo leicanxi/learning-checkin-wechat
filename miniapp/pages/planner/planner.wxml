@@ -31,8 +31,8 @@
 
     <view class="planner-actions">
       <view class="icon-action" bindtap="uploadMaterial">+</view>
-      <view class="icon-action {{voiceActive ? 'voice recording' : 'voice'}}" bindtap="toggleVoice">
-        {{voiceActive ? '停' : '录'}}
+      <view class="icon-action {{voiceActive ? 'voice recording' : 'voice'}} {{voiceProcessing ? 'processing' : ''}}" bindtap="toggleVoice">
+        {{voiceProcessing ? '...' : (voiceActive ? '停' : '录')}}
       </view>
       <view class="primary flex-1" bindtap="generatePlan" style="flex:1">
         {{loading ? 'AI 规划中...' : 'AI 规划'}}

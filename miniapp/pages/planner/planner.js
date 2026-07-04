@@ -1,11 +1,15 @@
-const { post } = require('../../utils/api')
+const { post, uploadFile } = require('../../utils/api')
+
+// 录音管理器（单例）
+const recorderManager = wx.getRecorderManager()
 
 Page({
   data: {
     learningModes: ['考试冲刺', '日常积累', '技能进修', '错题复盘', '自由模式'],
     modeIndex: 0,
     goalText: '',
-    voiceActive: false,
+    voiceActive: false,       // 正在录音
+    voiceProcessing: false,   // 识别中
     loading: false,
     customName: '',
     customDuration: '',
@@ -14,11 +18,15 @@ Page({
     weekDays: ['一', '二', '三', '四', '五', '六', '日'],
     selectedDays: [true, true, true, true, true, false, false],
     everyDay: false,
-    planList: [],        // 展示用字符串数组，保持 WXML 兼容
-    planItems: [],       // 结构化数据 [{ type, name, task_date, subject, suggested_duration, difficulty, knowledge_tags, source, display }]
-    aiSummary: '',       // AI 计划概述
+    planList: [],
+    planItems: [],
+    aiSummary: '',
     toastShow: false,
     toastText: ''
+  },
+
+  onLoad() {
+    this._setupRecorder()
   },
 
   // 学习模式
@@ -30,11 +38,68 @@ Page({
     this.setData({ goalText: e.detail.value })
   },
 
-  // 语音
+  // ─── 语音输入 ─────────────────────────────────────────────
+
+  _setupRecorder() {
+    recorderManager.onStart(() => {
+      this.setData({ voiceActive: true })
+      this.showToast('正在聆听...')
+    })
+
+    recorderManager.onStop((res) => {
+      this.setData({ voiceActive: false, voiceProcessing: true })
+      const { tempFilePath, duration } = res
+      if (duration < 500) {
+        this.setData({ voiceProcessing: false })
+        wx.showToast({ title: '录音时间过短', icon: 'none', duration: 1500 })
+        return
+      }
+      this._transcribe(tempFilePath)
+    })
+
+    recorderManager.onError((err) => {
+      console.error('[Voice] recorder error:', err)
+      this.setData({ voiceActive: false, voiceProcessing: false })
+      wx.showToast({ title: '录音启动失败，请授权麦克风后重试', icon: 'none', duration: 2000 })
+    })
+  },
+
   toggleVoice() {
-    const active = !this.data.voiceActive
-    this.setData({ voiceActive: active })
-    this.showToast(active ? '正在模拟语音输入' : '语音输入已结束')
+    if (this.data.voiceProcessing) return
+
+    if (this.data.voiceActive) {
+      // 停止录音
+      recorderManager.stop()
+    } else {
+      // 开始录音
+      recorderManager.start({
+        duration: 60000,        // 最长 60 秒
+        sampleRate: 16000,      // 16kHz（ASR 标准）
+        numberOfChannels: 1,    // 单声道
+        encodeBitRate: 48000,   // 码率
+        format: 'mp3'           // MP3 格式
+      })
+    }
+  },
+
+  async _transcribe(filePath) {
+    try {
+      this.showToast('正在识别语音...')
+      const res = await uploadFile('/ai/speech-to-text', filePath, 'audio')
+      const text = (res && res.text) || ''
+      if (text) {
+        const current = this.data.goalText
+        // 如果已有文字，用空格分隔追加
+        this.setData({ goalText: current ? `${current} ${text}` : text })
+        this.showToast('语音识别完成')
+      } else {
+        wx.showToast({ title: '未识别到语音内容', icon: 'none', duration: 1500 })
+      }
+    } catch (e) {
+      // uploadFile 内部已处理 toast
+      console.error('[Voice] transcribe error:', e)
+    }
+    this.setData({ voiceProcessing: false })
   },
 
   // 上传材料
