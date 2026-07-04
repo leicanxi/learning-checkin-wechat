@@ -95,6 +95,7 @@ from routers.stats_router import router as stats_router
 from routers.calendar_router import router as calendar_router
 from routers.ranking_router import router as ranking_router
 from routers.settings_router import router as settings_router
+from routers.debug_router import router as debug_router
 
 app.include_router(auth_router)
 app.include_router(tasks_router)
@@ -104,6 +105,7 @@ app.include_router(stats_router)
 app.include_router(calendar_router)
 app.include_router(ranking_router)
 app.include_router(settings_router)
+app.include_router(debug_router)
 
 
 # ---------------------------------------------------------------------------

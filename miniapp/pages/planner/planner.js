@@ -10,6 +10,7 @@ Page({
     customName: '',
     customDuration: '',
     customSubject: '',
+    customPlanEnabled: false,
     weekDays: ['一', '二', '三', '四', '五', '六', '日'],
     selectedDays: [true, true, true, true, true, false, false],
     everyDay: false,
@@ -95,7 +96,7 @@ Page({
     this.setData({ goalText: '', planList: [], planItems: [], aiSummary: '' })
   },
 
-  // 自定义任务
+  // 自定义任务（MVP 先屏蔽入口，逻辑保留，后期可恢复）
   onCustomName(e) { this.setData({ customName: e.detail.value }) },
   onCustomDuration(e) { this.setData({ customDuration: e.detail.value }) },
   onCustomSubject(e) { this.setData({ customSubject: e.detail.value }) },
@@ -207,7 +208,7 @@ Page({
         suggested_duration: item.suggested_duration || 30,
         difficulty: item.difficulty || 'medium',
         knowledge_tags: item.knowledge_tags || [],
-        source: item.source || 'manual'
+        source: item.source || 'ai'
       }))
 
       await post('/tasks/batch', { tasks })

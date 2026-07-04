@@ -20,7 +20,25 @@ class FakeDb:
         return FakeQuery()
 
 
+class HighCountQuery:
+    def filter(self, *args, **kwargs):
+        return self
+
+    def scalar(self):
+        return 999
+
+
+class HighCountDb:
+    def query(self, *args, **kwargs):
+        return HighCountQuery()
+
+
 class AiGeneratePlanTests(unittest.IsolatedAsyncioTestCase):
+    def test_ai_rate_limit_is_disabled_for_mvp_testing(self):
+        user = SimpleNamespace(id=1)
+
+        ai_router.check_ai_rate_limit(user, HighCountDb())
+
     async def test_generate_plan_accepts_canonical_tasks_fields(self):
         async def fake_call_deepseek(prompt):
             return {

@@ -21,11 +21,15 @@ from config import settings
 router = APIRouter(prefix="/ai", tags=["AI 服务"])
 
 # AI 调用频率限制：每用户每日 10 次
-AI_DAILY_LIMIT = 10
+# 0 disables the limit for MVP testing.
+AI_DAILY_LIMIT = 0
 
 
 def check_ai_rate_limit(user: User, db: Session) -> None:
     """检查用户今日 AI 调用次数，超过限制抛出 429"""
+    if AI_DAILY_LIMIT <= 0:
+        return
+
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_calls = (
         db.query(func.count(Task.id))
