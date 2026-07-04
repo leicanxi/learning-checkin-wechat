@@ -44,9 +44,10 @@
         class="task-row"
       >
         <view
-          class="check-box {{item.done ? 'done' : ''}}"
+          class="check-box {{item.completed ? 'done' : ''}}"
           data-id="{{item.id}}"
-          data-done="{{item.done}}"
+          data-completed="{{item.completed}}"
+          data-checkin-id="{{item.checkin_id}}"
           bindtap="toggleTask"
         />
         <view class="task-info-col">

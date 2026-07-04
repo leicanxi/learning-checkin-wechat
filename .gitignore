@@ -1,38 +1,17 @@
-# 环境变量（含密钥）
-.env
-backend/.env
+# 环境变量
 *.env
-
-# 保留模板文件
 !.env.example
-!backend/.env.example
 
 # Python
 __pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
+
+# 依赖
+node_modules/
 .venv/
 venv/
 
-# 数据库
-*.db
-*.sqlite3
-
 # 上传文件
 uploads/
-backend/uploads/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Node
-node_modules/
-miniapp/node_modules/
 
 # 系统文件
 .DS_Store

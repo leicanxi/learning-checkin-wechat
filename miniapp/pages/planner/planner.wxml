@@ -6,7 +6,7 @@
 <scroll-view scroll-y class="screen">
   <view class="page-kicker">智能计划</view>
   <view class="page-title">把材料变成可执行的学习任务。</view>
-  <view class="page-subtitle">上传材料、粘贴目标，或手动添加自定义周期任务。</view>
+  <view class="page-subtitle">上传材料或粘贴目标，让 AI 生成可确认的扁平任务计划。</view>
 
   <!-- AI 规划区 -->
   <view class="card pad mt">
@@ -41,8 +41,8 @@
     </view>
   </view>
 
-  <!-- 自定义计划 -->
-  <view class="custom-plan card pad mt">
+  <!-- 自定义计划：MVP 先屏蔽入口，代码保留，后期可恢复 -->
+  <view wx:if="{{customPlanEnabled}}" class="custom-plan card pad mt">
     <view class="section-title" style="font-size:21px;margin-bottom:10px">自定义计划</view>
 
     <view class="custom-grid">

@@ -81,11 +81,10 @@ class TaskCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=200)
     subject: Optional[str] = Field(None, max_length=50)
     suggested_duration: Optional[int] = Field(25, ge=0)
-    task_type: Optional[str] = Field("main", pattern="^(main|light|review)$")
-    repeat_days: Optional[int] = Field(127, ge=0, le=127)
     difficulty: Optional[str] = Field("medium", pattern="^(low|medium|high)$")
-    start_date: date
-    end_date: Optional[date] = None
+    task_date: date
+    knowledge_tags: List[str] = []
+    source: Optional[str] = Field("manual", pattern="^(manual|ai|system)$")
 
 
 class TaskBatchCreate(BaseModel):
@@ -99,12 +98,11 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=200)
     subject: Optional[str] = Field(None, max_length=50)
     suggested_duration: Optional[int] = Field(None, ge=0)
-    task_type: Optional[str] = Field(None, pattern="^(main|light|review)$")
-    repeat_days: Optional[int] = Field(None, ge=0, le=127)
     difficulty: Optional[str] = Field(None, pattern="^(low|medium|high)$")
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    status: Optional[str] = Field(None, pattern="^(active|completed|expired|deleted)$")
+    task_date: Optional[date] = None
+    knowledge_tags: Optional[List[str]] = None
+    source: Optional[str] = Field(None, pattern="^(manual|ai|system)$")
+    status: Optional[str] = Field(None, pattern="^(active|expired|deleted)$")
 
 
 class TaskOut(BaseModel):
@@ -115,16 +113,13 @@ class TaskOut(BaseModel):
     description: str
     subject: str
     suggested_duration: int
-    task_type: str
-    repeat_days: int
     difficulty: str
-    start_date: date
-    end_date: Optional[date] = None
+    task_date: date
+    knowledge_tags: List[str] = []
+    source: str = "manual"
     status: str
-    is_ai_generated: bool
-    is_review_task: bool
-    parent_task_id: Optional[int] = None
-    ai_review_intervals: Optional[str] = None
+    completed: bool = False
+    checkin_id: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -145,7 +140,6 @@ class CheckinCreate(BaseModel):
     """打卡请求"""
     task_id: int
     checkin_time: Optional[datetime] = None
-    is_review: Optional[bool] = False
 
 
 class CheckinBackfill(BaseModel):
@@ -157,8 +151,6 @@ class CheckinBackfill(BaseModel):
 class CheckinUpdate(BaseModel):
     """更新打卡记录请求"""
     checkin_time: Optional[datetime] = None
-    is_review: Optional[bool] = None
-    review_round: Optional[int] = None
     subject: Optional[str] = Field(None, max_length=50)
 
 
@@ -168,9 +160,8 @@ class CheckinOut(BaseModel):
     user_id: int
     task_id: int
     subject: str
+    checkin_date: date
     checkin_time: datetime
-    is_review: bool
-    review_round: int
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
@@ -189,14 +180,13 @@ class AIGeneratePlanRequest(BaseModel):
 
 class AIPlanTask(BaseModel):
     """AI 计划中的单个子任务"""
-    task_name: str
-    scheduled_date: date
-    day_number: int
+    name: str
+    task_date: date
     subject: str = ""
     suggested_duration: int = 25
     difficulty: str = "medium"
     knowledge_tags: List[str] = []
-    review_round: int = 0
+    source: str = "ai"
 
 
 class AIGeneratePlanResponse(BaseModel):
@@ -205,7 +195,7 @@ class AIGeneratePlanResponse(BaseModel):
     mode_inferred: bool = False
     total_days: int
     summary: str
-    plan: List[AIPlanTask]
+    tasks: List[AIPlanTask]
 
 
 class AIProgressResponse(BaseModel):
@@ -284,7 +274,7 @@ class CalendarDate(BaseModel):
     """日历日期信息"""
     date: str
     day_of_week: int
-    status: str  # checked_in / missed / rest_suggested / today / tomorrow_suggested
+    status: str  # checked_in / pending / missed / empty
     checkin_count: int = 0
     is_today: bool = False
     is_rest_suggested: bool = False
@@ -303,11 +293,14 @@ class TodayTaskItem(BaseModel):
     """今日任务项"""
     id: int
     name: str
+    task_date: date
     subject: str
-    task_type: str
     suggested_duration: int
+    difficulty: str
+    knowledge_tags: List[str] = []
+    source: str = "manual"
     completed: bool
-    is_review: bool
+    checkin_id: Optional[int] = None
 
 
 class CalendarTodayResponse(BaseModel):
@@ -320,7 +313,8 @@ class CalendarTodayResponse(BaseModel):
 
 class TomorrowRecommendedTask(BaseModel):
     """明日推荐任务"""
-    task_name: str
+    name: str
+    task_date: date
     subject: str
     difficulty: str
     suggested_duration: int

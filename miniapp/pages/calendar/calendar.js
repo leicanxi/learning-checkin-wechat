@@ -17,10 +17,8 @@ Page({
     legends: [
       { dotClass: 'done-dot', text: '已打卡' },
       { dotClass: 'missed-dot', text: '未打卡' },
-      { dotClass: 'rest-dot', text: '休息日' },
       { dotClass: 'today-dot', text: '今日' },
-      { dotClass: 'tomorrow-dot', text: '明日推荐' },
-      { dotClass: 'pending-dot', text: '待排期' }
+      { dotClass: 'pending-dot', text: '待完成' }
     ]
   },
 
@@ -63,10 +61,6 @@ Page({
     const startDow = firstDay.getDay()
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
-
     const cells = []
 
     // 前置空白
@@ -89,28 +83,13 @@ Page({
             cls += ' done'; status = '已打卡'; break
           case 'missed':
             cls += ' missed'; status = '未打卡'; break
-          case 'rest_suggested':
-            cls += ' rest'; status = '休息日'; break
-          case 'today':
-            cls += ' today'; status = '今日'; break
-          case 'tomorrow_suggested':
-            cls += ' tomorrow'; status = '明日推荐'; break
           case 'pending':
-            cls += ' pending'; status = '待排期'; break
-          case 'missed':
-            cls += ' missed'; status = '未打卡'; break
+            cls += ds === todayStr ? ' today' : ' pending'; status = ds === todayStr ? '今日' : '待完成'; break
+          case 'empty':
+            status = ''; break
         }
       } else {
-        // 无数据时用日期规则推断
-        if (ds === todayStr) {
-          cls += ' today'; status = '今日'
-        } else if (ds === tomorrowStr) {
-          cls += ' tomorrow'; status = '明日推荐'
-        } else if (dow === 0 || dow === 6) {
-          cls += ' rest'; status = '休息日'
-        } else if (ds < todayStr) {
-          cls += ' missed'; status = '未打卡'
-        }
+        status = ''
       }
 
       cells.push({ day: d, muted: false, cls, status, date: ds })
@@ -122,7 +101,7 @@ Page({
   },
 
   calcRate(cells) {
-    const valid = cells.filter(c => c.date && c.status !== '休息日')
+    const valid = cells.filter(c => c.date && c.status)
     if (valid.length === 0) return 0
     const done = valid.filter(c => c.status === '已打卡').length
     return Math.round(done / valid.length * 100)
@@ -146,16 +125,16 @@ Page({
     if (date === todayStr) {
       const todayData = this.data.todayData
       if (todayData && todayData.tasks && todayData.tasks.length > 0) {
-        const items = todayData.tasks.map(t => `- ${t.name || t.task_name}（${t.suggested_duration || '30'} 分钟）`)
+        const items = todayData.tasks.map(t => `- ${t.name}（${t.suggested_duration || '30'} 分钟）`)
         text = '今日任务：\n' + items.join('\n')
       } else if (preview.length > 0) {
-        text = '今日安排：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.task_name || t.name}`).join('\n')
+        text = '今日安排：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.name}`).join('\n')
       } else {
         text = '今天安排了学习任务，暂未加载详情。'
       }
     } else if (date > todayStr) {
       if (preview.length > 0) {
-        text = '安排任务：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.task_name || t.name}`).join('\n')
+        text = '安排任务：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.name}`).join('\n')
       } else if (checkinCount > 0) {
         text = `已安排 ${checkinCount} 项学习任务。`
       } else {
@@ -163,11 +142,9 @@ Page({
       }
     } else if (status === '已打卡') {
       text = preview.length > 0
-        ? '已完成：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.task_name || t.name}`).join('\n')
+        ? '已完成：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.name}`).join('\n')
         : '当天已完成学习打卡，学习记录已计入统计。'
-    } else if (status === '休息日') {
-      text = '系统建议休息日，可做 5 分钟轻量复盘。'
-    } else if (status === '待排期') {
+    } else if (status === '待完成') {
       text = '暂无安排，可在规划页添加任务。'
     } else {
       text = '当天没有完整打卡记录。'

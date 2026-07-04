@@ -10,11 +10,12 @@ Page({
     customName: '',
     customDuration: '',
     customSubject: '',
+    customPlanEnabled: false,
     weekDays: ['一', '二', '三', '四', '五', '六', '日'],
     selectedDays: [true, true, true, true, true, false, false],
     everyDay: false,
     planList: [],        // 展示用字符串数组，保持 WXML 兼容
-    planItems: [],       // 结构化数据 [{ type, task_name, scheduled_date, subject, suggested_duration, difficulty, knowledge_tags, repeat_days, display }]
+    planItems: [],       // 结构化数据 [{ type, name, task_date, subject, suggested_duration, difficulty, knowledge_tags, source, display }]
     aiSummary: '',       // AI 计划概述
     toastShow: false,
     toastText: ''
@@ -61,18 +62,19 @@ Page({
         mode: modeMap[this.data.modeIndex] || 'free',
         content: this.data.goalText
       })
-      if (res.plan && res.plan.length > 0) {
+      const generatedTasks = res.tasks || []
+      if (generatedTasks.length > 0) {
         // 结构化存储每个任务，保留全部字段
-        const aiItems = res.plan.map(p => ({
+        const aiItems = generatedTasks.map(p => ({
           type: 'ai',
-          task_name: p.task_name,
-          scheduled_date: p.scheduled_date,
+          name: p.name,
+          task_date: p.task_date,
           subject: p.subject || '',
           suggested_duration: p.suggested_duration || 30,
           difficulty: p.difficulty || 'medium',
           knowledge_tags: p.knowledge_tags || [],
-          repeat_days: 0,  // AI 任务不重复
-          display: `${p.task_name}（${p.scheduled_date || '待排期'}｜${p.subject || '综合'}｜${p.suggested_duration || 30}min）`
+          source: 'ai',
+          display: `${p.name}（${p.task_date || '待排期'}｜${p.subject || '综合'}｜${p.suggested_duration || 30}min）`
         }))
 
         this.setData({
@@ -80,7 +82,7 @@ Page({
           planItems: [...this.data.planItems, ...aiItems],
           planList: [...this.data.planList, ...aiItems.map(i => i.display)]
         })
-        this.showToast(`已生成 ${res.plan.length} 项学习任务`)
+        this.showToast(`已生成 ${generatedTasks.length} 项学习任务`)
       } else {
         this.showToast('未生成计划，请调整输入')
       }
@@ -94,7 +96,7 @@ Page({
     this.setData({ goalText: '', planList: [], planItems: [], aiSummary: '' })
   },
 
-  // 自定义任务
+  // 自定义任务（MVP 先屏蔽入口，逻辑保留，后期可恢复）
   onCustomName(e) { this.setData({ customName: e.detail.value }) },
   onCustomDuration(e) { this.setData({ customDuration: e.detail.value }) },
   onCustomSubject(e) { this.setData({ customSubject: e.detail.value }) },
@@ -138,27 +140,33 @@ Page({
 
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const repeatDays = this.data.everyDay ? 127 : selectedDays.reduce((acc, on, i) => on ? acc | (1 << i) : acc, 0)
-
-    const item = {
-      type: 'custom',
-      task_name: customName,
-      scheduled_date: todayStr,
-      subject: customSubject || '',
-      suggested_duration: parseInt(customDuration) || 20,
-      difficulty: 'medium',
-      knowledge_tags: [],
-      repeat_days: repeatDays,
-      display
+    const items = []
+    for (let offset = 0; offset < 7; offset++) {
+      const d = new Date(today)
+      d.setDate(today.getDate() + offset)
+      const weekdayIndex = (d.getDay() + 6) % 7
+      if (!selectedDays[weekdayIndex]) continue
+      const taskDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      items.push({
+        type: 'custom',
+        name: customName,
+        task_date: taskDate,
+        subject: customSubject || '',
+        suggested_duration: parseInt(customDuration) || 20,
+        difficulty: 'medium',
+        knowledge_tags: [],
+        source: 'manual',
+        display: `${customName}（${taskDate}｜${customSubject || '自定义'}｜${customDuration || '20'}min）`
+      })
     }
     this.setData({
-      planItems: [...this.data.planItems, item],
-      planList: [...this.data.planList, display],
+      planItems: [...this.data.planItems, ...items],
+      planList: [...this.data.planList, ...items.map(i => i.display)],
       customName: '',
       customDuration: '',
       customSubject: ''
     })
-    this.showToast('已添加自定义计划')
+    this.showToast(`已添加 ${items.length} 项自定义任务`)
   },
 
   // 编辑计划（弹窗）
@@ -193,32 +201,22 @@ Page({
     if (this.data.planItems.length === 0) return
     try {
       // 从结构化 planItems 构建 TaskCreate 数组
-      const tasks = this.data.planItems.map(item => {
-        const task = {
-          name: item.task_name,
-          subject: item.subject || '',
-          suggested_duration: item.suggested_duration || 30,
-          task_type: 'main',
-          difficulty: item.difficulty || 'medium',
-          repeat_days: item.repeat_days != null ? item.repeat_days : 0,
-          start_date: item.scheduled_date
-        }
-        // AI 单日任务（repeat_days=0）：设置 end_date=start_date，避免日历跨天显示
-        if (item.repeat_days === 0) {
-          task.end_date = item.scheduled_date
-        }
-        return task
-      })
+      const tasks = this.data.planItems.map(item => ({
+        name: item.name,
+        task_date: item.task_date,
+        subject: item.subject || '',
+        suggested_duration: item.suggested_duration || 30,
+        difficulty: item.difficulty || 'medium',
+        knowledge_tags: item.knowledge_tags || [],
+        source: item.source || 'ai'
+      }))
 
       await post('/tasks/batch', { tasks })
       this.showToast('计划已导入首页任务与日历')
       this.setData({ planList: [], planItems: [], goalText: '', aiSummary: '' })
       setTimeout(() => { wx.switchTab({ url: '/pages/home/home' }) }, 800)
     } catch (e) {
-      // 容错：即使后端报错也尝试跳转
-      this.showToast('计划已导入首页任务与日历')
-      this.setData({ planList: [], planItems: [], goalText: '', aiSummary: '' })
-      setTimeout(() => { wx.switchTab({ url: '/pages/home/home' }) }, 800)
+      this.showToast(e.message || '计划导入失败')
     }
   },
 
