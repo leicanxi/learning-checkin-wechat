@@ -3,8 +3,11 @@ AI 服务路由
 """
 import json
 import re
+import base64
+import hashlib
+import hmac
 import httpx
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -314,6 +317,122 @@ async def upload_material(
         "filename": filename,
         "filepath": f"/uploads/materials/{filename}",
     }
+
+
+def _sign_tc3(secret_id: str, secret_key: str, service: str, host: str,
+              action: str, payload: str, timestamp: int = None) -> dict:
+    """腾讯云 API v3 签名 (TC3-HMAC-SHA256)"""
+    algorithm = "TC3-HMAC-SHA256"
+    if timestamp is None:
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+    date_str = datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%d")
+
+    # Step 1: Canonical Request
+    canonical_uri = "/"
+    canonical_querystring = ""
+    ct = "application/json; charset=utf-8"
+    canonical_headers = f"content-type:{ct}\nhost:{host}\nx-tc-action:{action.lower()}\n"
+    signed_headers = "content-type;host;x-tc-action"
+    hashed_payload = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    canonical_request = (
+        f"POST\n{canonical_uri}\n{canonical_querystring}\n"
+        f"{canonical_headers}\n{signed_headers}\n{hashed_payload}"
+    )
+
+    # Step 2: String to Sign
+    credential_scope = f"{date_str}/{service}/tc3_request"
+    hashed_canonical_request = hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+    string_to_sign = (
+        f"{algorithm}\n{timestamp}\n{credential_scope}\n{hashed_canonical_request}"
+    )
+
+    # Step 3: Signature
+    def _hmac(key, msg):
+        return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+
+    secret_date = _hmac(("TC3" + secret_key).encode("utf-8"), date_str)
+    secret_service = _hmac(secret_date, service)
+    secret_signing = _hmac(secret_service, "tc3_request")
+    signature = hmac.new(secret_signing, string_to_sign.encode("utf-8"),
+                         hashlib.sha256).hexdigest()
+
+    authorization = (
+        f"{algorithm} Credential={secret_id}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, Signature={signature}"
+    )
+
+    return {
+        "Authorization": authorization,
+        "Content-Type": ct,
+        "Host": host,
+        "X-TC-Action": action,
+        "X-TC-Timestamp": str(timestamp),
+        "X-TC-Version": "2019-06-14",
+        "X-TC-Region": "ap-guangzhou",
+    }
+
+
+@router.post("/speech-to-text")
+async def speech_to_text(
+    audio: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+):
+    """
+    语音转文字
+    接收录音文件（mp3/aac），调用腾讯云 ASR 返回识别文本
+    """
+    if not settings.TENCENT_SECRET_ID or not settings.TENCENT_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="语音识别服务未配置，请在 .env 中设置 TENCENT_SECRET_ID / TENCENT_SECRET_KEY")
+
+    audio_bytes = await audio.read()
+    if len(audio_bytes) == 0:
+        raise HTTPException(status_code=400, detail="音频文件为空")
+    if len(audio_bytes) > 3 * 1024 * 1024:  # 3MB 限制
+        raise HTTPException(status_code=400, detail="音频文件过大（最大 3MB）")
+
+    # 判断格式
+    ext = (audio.filename or "").lower()
+    fmt_map = {"mp3": "mp3", "wav": "wav", "m4a": "m4a", "aac": "aac", "pcm": "pcm"}
+    voice_format = "mp3"
+    for k, v in fmt_map.items():
+        if k in ext:
+            voice_format = v
+            break
+
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+    host = "asr.tencentcloudapi.com"
+    service = "asr"
+    payload = json.dumps({
+        "ProjectId": 0,
+        "SubServiceType": 2,
+        "EngSerViceType": "16k_zh",
+        "SourceType": 1,
+        "VoiceFormat": voice_format,
+        "Data": audio_b64,
+        "DataLen": len(audio_bytes),
+    })
+
+    headers = _sign_tc3(
+        settings.TENCENT_SECRET_ID,
+        settings.TENCENT_SECRET_KEY,
+        service, host, "SentenceRecognition", payload,
+    )
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(f"https://{host}", content=payload, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502,
+                                detail=f"ASR 服务异常: {resp.text[:300]}")
+        result = resp.json()
+
+    if "Response" in result and "Error" in result["Response"]:
+        error = result["Response"]["Error"]
+        raise HTTPException(status_code=502,
+                            detail=f"语音识别失败: {error.get('Message', '未知错误')}")
+
+    text = (result.get("Response", {}).get("Result") or "").strip()
+    return {"text": text}
 
 
 @router.get("/progress", response_model=AIProgressResponse)

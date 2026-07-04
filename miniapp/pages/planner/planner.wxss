@@ -72,6 +72,17 @@
   color: var(--terracotta);
 }
 
+.icon-action.processing {
+  background: var(--clay-soft);
+  color: var(--stone);
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 /* 自定义计划 */
 .custom-grid {
   display: flex;

@@ -26,6 +26,10 @@ class Settings:
     DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "sk-test-key")
     DEEPSEEK_API_BASE: str = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")
 
+    # 腾讯云 ASR (语音识别)
+    TENCENT_SECRET_ID: str = os.getenv("TENCENT_SECRET_ID", "")
+    TENCENT_SECRET_KEY: str = os.getenv("TENCENT_SECRET_KEY", "")
+
     # 文件上传
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
