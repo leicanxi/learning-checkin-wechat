@@ -34,8 +34,14 @@ def get_existing_checkin(db: Session, user_id: int, task_id: int, checkin_date: 
     )
 
 
-def create_checkin_record(db: Session, user: User, task: Task, checkin_time: datetime) -> Checkin:
-    task_date = checkin_time.date()
+def create_checkin_record(
+    db: Session,
+    user: User,
+    task: Task,
+    checkin_time: datetime,
+    checkin_date: date | None = None,
+) -> Checkin:
+    task_date = checkin_date or checkin_time.date()
     existing = get_existing_checkin(db, user.id, task.id, task_date)
     if existing:
         return existing
@@ -69,7 +75,13 @@ async def create_checkin(
     if task.status in ("deleted", "expired"):
         raise HTTPException(status_code=400, detail="任务不可打卡")
 
-    checkin = create_checkin_record(db, user, task, req.checkin_time or datetime.utcnow())
+    checkin = create_checkin_record(
+        db,
+        user,
+        task,
+        req.checkin_time or datetime.utcnow(),
+        checkin_date=task.start_date,
+    )
     return CheckinOut.model_validate(checkin)
 
 
@@ -92,7 +104,7 @@ async def backfill_checkin(
         raise HTTPException(status_code=404, detail="任务不存在")
 
     checkin_time = datetime.combine(req.checkin_date, datetime.min.time().replace(hour=12))
-    checkin = create_checkin_record(db, user, task, checkin_time)
+    checkin = create_checkin_record(db, user, task, checkin_time, checkin_date=req.checkin_date)
     return CheckinOut.model_validate(checkin)
 
 

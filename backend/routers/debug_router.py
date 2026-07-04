@@ -625,15 +625,22 @@ DEBUG_TASKS_HTML = """
     }
 
     async function loadUsers() {
+      const currentUserId = $('userSelect').value || localStorage.getItem('debugSelectedUserId') || ''
       const users = await api('/debug/api/users')
       $('userSelect').innerHTML = users.map(u => {
         const label = `#${u.id} ${u.nickname || '(no nickname)'} ${u.email || u.openid || ''}`
         return `<option value="${u.id}">${label}</option>`
       }).join('')
+      if (currentUserId && users.some(u => String(u.id) === String(currentUserId))) {
+        $('userSelect').value = currentUserId
+      }
       if (users.length) onUserChange()
     }
 
     function onUserChange() {
+      if (selectedUserId()) {
+        localStorage.setItem('debugSelectedUserId', String(selectedUserId()))
+      }
       loadTasks()
       loadUserGroup()
       loadBadges()
