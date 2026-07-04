@@ -43,9 +43,10 @@ Page({
 
   async loadAll() {
     try {
+      const isGlobalScope = this.data.activeRankScope === '全局'
       const [stats, ranking] = await Promise.all([
         get('/stats/', { period: this.getPeriodKey() }).catch(() => null),
-        get('/ranking/me', { scope: this.data.activeRankScope === '全局' ? 'global' : 'group' }).catch(() => null)
+        get('/ranking/me', { scope: isGlobalScope ? 'global' : 'group' }).catch(() => null)
       ])
 
       // 趋势数据 —— 后端字段 checkin_trend
@@ -90,8 +91,9 @@ Page({
           ...s,
           percentage: Math.round(s.percentage || 0)
         })),
-        rankPercent: ranking ? ranking.rank_range : '--',
-        rankHonor: ranking ? (ranking.rank_range_label || ranking.rank_title || '加载中...') : '加载中...',
+        rankScopeLabel: isGlobalScope ? '全局排名区间' : '小组排名区间',
+        rankPercent: ranking ? (ranking.rank_range_label || '--') : '--',
+        rankHonor: ranking ? (ranking.rank_title || '加载中...') : '加载中...',
         displayBadges: this.data.allBadges.slice(0, 3)
       })
 
@@ -163,7 +165,10 @@ Page({
 
   switchRankScope(e) {
     const scope = e.currentTarget.dataset.scope
-    this.setData({ activeRankScope: scope })
+    this.setData({
+      activeRankScope: scope,
+      rankScopeLabel: scope === '全局' ? '全局排名区间' : '小组排名区间'
+    })
     this.loadAll()
   },
 

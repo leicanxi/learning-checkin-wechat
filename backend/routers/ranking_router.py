@@ -1,8 +1,7 @@
 """
 排行与徽章路由
 """
-import statistics
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -18,42 +17,34 @@ router = APIRouter(tags=["排行与徽章"])
 
 
 def calculate_regularity_score(user_id: int, db: Session) -> float:
-    """计算规律性得分"""
-    # 获取用户最近 30 天的打卡时间
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    checkins = (
-        db.query(Checkin)
+    """Calculate a simple MVP score from flat task completion in the last 30 days."""
+    start = date.today() - timedelta(days=29)
+    tasks = (
+        db.query(Task)
         .filter(
-            Checkin.user_id == user_id,
-            Checkin.checkin_time >= thirty_days_ago,
+            Task.user_id == user_id,
+            Task.status != "deleted",
+            Task.start_date >= start,
+            Task.start_date <= date.today(),
         )
         .all()
     )
 
-    if len(checkins) < 7:
-        return -1.0  # 打卡不足 7 次
-
-    # 提取打卡时间的小时+分钟（十进制）
-    times = []
-    for c in checkins:
-        hour = c.checkin_time.hour
-        minute = c.checkin_time.minute
-        decimal_time = hour + minute / 60.0
-        times.append(decimal_time)
-
-    if len(times) < 2:
+    if not tasks:
         return -1.0
 
-    avg_time = sum(times) / len(times)
-    if avg_time == 0:
-        return 0.0
-
-    std_dev = statistics.stdev(times) if len(times) > 1 else 0
-    if avg_time == 0:
-        return 0.0
-
-    wave_coefficient = std_dev / avg_time
-    score = max(0.0, 100.0 - wave_coefficient * 100.0)
+    task_ids = [task.id for task in tasks]
+    checkins = (
+        db.query(Checkin.task_id, Checkin.checkin_date)
+        .filter(
+            Checkin.user_id == user_id,
+            Checkin.task_id.in_(task_ids),
+        )
+        .all()
+    )
+    completed_keys = {(row.task_id, row.checkin_date) for row in checkins}
+    completed = sum(1 for task in tasks if (task.id, task.start_date) in completed_keys)
+    score = completed / len(tasks) * 100.0
 
     return round(score, 1)
 
@@ -66,14 +57,16 @@ def determine_rank_range(scores: list, user_score: float) -> str:
     if not scores:
         return "insufficient"
 
-    # 统计有多少人得分低于该用户
-    lower_count = sum(1 for s in scores if s < user_score)
     total = len(scores)
-    percentile = lower_count / total if total > 0 else 0
-
-    if percentile >= 0.8:
+    if total <= 1:
         return "top_20"
-    elif percentile >= 0.4:
+
+    higher_count = sum(1 for s in scores if s > user_score)
+    rank_percentile = (higher_count + 1) / total
+
+    if rank_percentile <= 0.2:
+        return "top_20"
+    elif rank_percentile <= 0.6:
         return "top_60"
     else:
         return "bottom_40"

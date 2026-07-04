@@ -73,7 +73,7 @@
       <block wx:if="{{tomorrowData}}">
         <text class="plan-card-title">{{tomorrowData.date}}</text>
         <text class="plan-card-desc" wx:for="{{tomorrowData.recommended_tasks}}" wx:key="index">
-          ○ {{item.task_name}}
+          ○ {{item.name}}
         </text>
       </block>
       <block wx:else>
