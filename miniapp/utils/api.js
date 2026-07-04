@@ -1,8 +1,9 @@
 const auth = require('./auth')
+const { getBaseURL } = require('./config')
 
 const BASE = () => {
   const app = getApp()
-  return app ? app.globalData.baseURL : 'http://127.0.0.1:8000'
+  return app ? app.globalData.baseURL : getBaseURL()
 }
 
 function request(method, path, data) {

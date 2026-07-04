@@ -1,4 +1,5 @@
 const auth = require('./utils/auth')
+const { CURRENT_ENV, getBaseURL } = require('./utils/config')
 
 App({
   onLaunch() {
@@ -9,6 +10,7 @@ App({
   globalData: {
     userInfo: null,
     token: '',
-    baseURL: 'http://127.0.0.1:8001'
+    env: CURRENT_ENV,
+    baseURL: getBaseURL()
   }
 })

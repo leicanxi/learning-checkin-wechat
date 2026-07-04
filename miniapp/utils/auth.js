@@ -1,3 +1,5 @@
+const { getBaseURL } = require('./config')
+
 function getAppGlobal() {
   const app = getApp()
   return app ? app.globalData : null
@@ -13,7 +15,7 @@ function login() {
         if (res.code) {
           const ga = getAppGlobal()
           wx.request({
-            url: `${ga ? ga.baseURL : 'http://127.0.0.1:8000'}/auth/wechat-login`,
+            url: `${ga ? ga.baseURL : getBaseURL()}/auth/wechat-login`,
             method: 'POST',
             data: { code: res.code },
             success(response) {
