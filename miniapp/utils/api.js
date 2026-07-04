@@ -1,7 +1,9 @@
 const auth = require('./auth')
-const app = getApp()
 
-const BASE = () => app.globalData.baseURL
+const BASE = () => {
+  const app = getApp()
+  return app ? app.globalData.baseURL : 'http://127.0.0.1:8000'
+}
 
 function request(method, path, data) {
   return new Promise((resolve, reject) => {

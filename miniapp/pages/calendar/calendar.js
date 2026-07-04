@@ -19,7 +19,8 @@ Page({
       { dotClass: 'missed-dot', text: '未打卡' },
       { dotClass: 'rest-dot', text: '休息日' },
       { dotClass: 'today-dot', text: '今日' },
-      { dotClass: 'tomorrow-dot', text: '明日推荐' }
+      { dotClass: 'tomorrow-dot', text: '明日推荐' },
+      { dotClass: 'pending-dot', text: '待排期' }
     ]
   },
 
@@ -45,6 +46,7 @@ Page({
       datesArr.forEach(d => { monthData[d.date] = d })
       this.buildCells(monthData, monthRes && monthRes.monthly_completion_rate)
       this.setData({
+        monthData,
         todayData: todayRes || null,
         tomorrowData: tomorrowRes || null
       })
@@ -93,8 +95,10 @@ Page({
             cls += ' today'; status = '今日'; break
           case 'tomorrow_suggested':
             cls += ' tomorrow'; status = '明日推荐'; break
-          default:
-            cls += ' missed'; status = '未打卡'
+          case 'pending':
+            cls += ' pending'; status = '待排期'; break
+          case 'missed':
+            cls += ' missed'; status = '未打卡'; break
         }
       } else {
         // 无数据时用日期规则推断
@@ -133,17 +137,40 @@ Page({
     const cellDate = new Date(date)
     const displayDate = `${cellDate.getMonth() + 1} 月 ${cellDate.getDate()} 日`
 
+    // 从后端返回的 monthData 获取该日期的任务详情
+    const dayData = (this.data.monthData && this.data.monthData[date]) || {}
+    const preview = dayData.suggested_tasks_preview || []
+    const checkinCount = dayData.checkin_count || 0
+
     let text = ''
     if (date === todayStr) {
-      text = '今天安排了学习任务。完成后会更新连续天数和统计页数据。'
+      const todayData = this.data.todayData
+      if (todayData && todayData.tasks && todayData.tasks.length > 0) {
+        const items = todayData.tasks.map(t => `- ${t.name || t.task_name}（${t.suggested_duration || '30'} 分钟）`)
+        text = '今日任务：\n' + items.join('\n')
+      } else if (preview.length > 0) {
+        text = '今日安排：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.task_name || t.name}`).join('\n')
+      } else {
+        text = '今天安排了学习任务，暂未加载详情。'
+      }
     } else if (date > todayStr) {
-      text = '已安排学习任务，建议保持连续学习节奏。'
+      if (preview.length > 0) {
+        text = '安排任务：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.task_name || t.name}`).join('\n')
+      } else if (checkinCount > 0) {
+        text = `已安排 ${checkinCount} 项学习任务。`
+      } else {
+        text = '暂无安排，可在规划页添加任务。'
+      }
     } else if (status === '已打卡') {
-      text = '当天已完成学习打卡，包含复习、练习或阅读任务，学习记录已计入统计。'
+      text = preview.length > 0
+        ? '已完成：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.task_name || t.name}`).join('\n')
+        : '当天已完成学习打卡，学习记录已计入统计。'
     } else if (status === '休息日') {
-      text = '系统建议休息日，可做 5 分钟轻量复盘，不影响长期节奏。'
+      text = '系统建议休息日，可做 5 分钟轻量复盘。'
+    } else if (status === '待排期') {
+      text = '暂无安排，可在规划页添加任务。'
     } else {
-      text = '当天没有完整打卡记录。可以补写学习备注，但不会计入连续天数。'
+      text = '当天没有完整打卡记录。'
     }
 
     this.setData({

@@ -111,6 +111,12 @@
   font-weight: 700;
 }
 
+.date-btn.pending {
+  background: rgba(250,249,245,.35);
+  color: var(--stone);
+  border-style: dotted;
+}
+
 /* 图例 */
 .legend-row {
   display: flex;
@@ -138,6 +144,7 @@
 .rest-dot { background: var(--stone); }
 .today-dot { background: var(--black); }
 .tomorrow-dot { background: var(--sage); }
+.pending-dot { background: var(--cream); border: 1px solid var(--stone); }
 
 /* 底部 Today/Tomorrow 卡片 */
 .bottom-cards {

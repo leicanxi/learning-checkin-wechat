@@ -37,27 +37,24 @@ Page({
     }
   },
 
-  // 微信授权登录
-  onLogin(e) {
-    if (!e.detail.userInfo) return
-    const { nickName, avatarUrl } = e.detail.userInfo
+  // 微信登录
+  onLogin() {
+    wx.showLoading({ title: '登录中...', mask: true })
 
     wx.login({
       success: (loginRes) => {
         if (!loginRes.code) {
-          wx.showToast({ title: '登录失败', icon: 'none' })
+          wx.hideLoading()
+          wx.showToast({ title: '微信登录失败', icon: 'none' })
           return
         }
 
         wx.request({
           url: `${getApp().globalData.baseURL}/auth/wechat-login`,
           method: 'POST',
-          data: {
-            code: loginRes.code,
-            nickname: nickName,
-            avatar_url: avatarUrl
-          },
+          data: { code: loginRes.code },
           success: (response) => {
+            wx.hideLoading()
             if (response.statusCode === 200 && response.data) {
               const { access_token, user } = response.data
               getApp().globalData.token = access_token
@@ -65,10 +62,11 @@ Page({
               wx.setStorageSync('token', access_token)
               wx.setStorageSync('userInfo', user)
 
+              const nickname = user.nickname || '用户'
               this.setData({
                 isLogin: true,
-                nickname: user.nickname || nickName,
-                avatarText: (user.nickname || nickName || '?').charAt(0).toUpperCase(),
+                nickname,
+                avatarText: nickname.charAt(0).toUpperCase(),
                 learningGoal: user.learning_goal || '尚未设置学习目标'
               })
 
@@ -77,24 +75,32 @@ Page({
 
               wx.showToast({ title: '登录成功', icon: 'success', duration: 1500 })
             } else {
-              wx.showToast({ title: '登录失败，请重试', icon: 'none' })
+              const msg = (response.data && response.data.detail) || '登录失败'
+              wx.showToast({ title: msg, icon: 'none' })
             }
           },
           fail: (err) => {
+            wx.hideLoading()
             console.error('登录接口错误:', err)
-            // 降级：后端不可用时用本地存储
-            const localUser = { nickname: nickName, avatar_url: avatarUrl }
-            wx.setStorageSync('token', 'local_token')
+            // 降级：后端不可用时用本地存储模拟登录
+            const localUser = { nickname: '学习用户', learning_goal: '' }
+            wx.setStorageSync('token', 'local_token_' + Date.now())
             wx.setStorageSync('userInfo', localUser)
+            getApp().globalData.token = 'local_token_' + Date.now()
+            getApp().globalData.userInfo = localUser
             this.setData({
               isLogin: true,
-              nickname: nickName,
-              avatarText: nickName.charAt(0).toUpperCase(),
+              nickname: '学习用户',
+              avatarText: '学',
               learningGoal: '尚未设置学习目标'
             })
             wx.showToast({ title: '已登录（本地模式）', icon: 'success', duration: 1500 })
           }
         })
+      },
+      fail: () => {
+        wx.hideLoading()
+        wx.showToast({ title: '微信登录失败', icon: 'none' })
       }
     })
   },

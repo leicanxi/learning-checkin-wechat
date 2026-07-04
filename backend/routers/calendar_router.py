@@ -36,14 +36,16 @@ def get_day_status(
     is_rest = d in rest_suggested_dates
     is_checked = d in checkin_dates
 
-    if is_today:
-        status = "today"
-    elif is_checked:
+    if is_checked:
         status = "checked_in"
+    elif is_today:
+        status = "today"
     elif is_rest:
         status = "rest_suggested"
     elif is_tomorrow and d in suggested_tasks_map:
         status = "tomorrow_suggested"
+    elif (d > today) and (d not in suggested_tasks_map):
+        status = "pending"
     else:
         status = "missed"
 
@@ -111,22 +113,34 @@ async def get_month_calendar(
             if future_date >= month_start and future_date < month_end:
                 rest_suggested_dates.add(future_date)
 
-    # 获取未来日期建议的任务
+    # 获取未来日期活跃的任务（按日期展开）
     suggested_tasks_map = {}
     future_tasks = (
         db.query(Task)
         .filter(
             Task.user_id == user.id,
             Task.status == "active",
-            Task.start_date >= today,
             Task.start_date < month_end,
         )
         .all()
     )
     for t in future_tasks:
-        if t.start_date not in suggested_tasks_map:
-            suggested_tasks_map[t.start_date] = []
-        suggested_tasks_map[t.start_date].append(t.name)
+        cur = max(t.start_date, today)
+        stop = min(t.end_date, month_end) if t.end_date else month_end
+        # 包含单日任务：start_date == end_date 的情况
+        if cur == stop:
+            if cur not in suggested_tasks_map:
+                suggested_tasks_map[cur] = []
+            suggested_tasks_map[cur].append(t.name)
+        else:
+            while cur < stop:
+                if cur not in suggested_tasks_map:
+                    suggested_tasks_map[cur] = []
+                suggested_tasks_map[cur].append(t.name)
+                cur += timedelta(days=1)
+
+    # 对于跨天任务：把 end_date 改为下次处理
+    # (上面已处理)<｜end▁of▁thinking｜>
 
     # 构建日期列表
     dates = []

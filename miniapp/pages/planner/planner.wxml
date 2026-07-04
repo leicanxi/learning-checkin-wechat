@@ -76,6 +76,12 @@
   <!-- 计划列表 -->
   <view wx:if="{{planList.length > 0}}" class="card pad mt14">
     <view class="section-title" style="font-size:22px;margin-bottom:8px">学习计划列表</view>
+
+    <!-- AI 反馈摘要 -->
+    <view wx:if="{{aiSummary}}" style="background:#f5f3ef;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <text style="font-size:13px;color:#4d4c48;line-height:1.6">{{aiSummary}}</text>
+    </view>
+
     <text class="page-subtitle" style="margin-top:0;margin-bottom:12px">可编辑、删除任务；确认后会导入首页任务列表与日历推荐。</text>
 
     <view wx:for="{{planList}}" wx:key="idx" class="generated-task">

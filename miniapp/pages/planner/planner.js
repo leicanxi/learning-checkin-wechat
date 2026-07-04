@@ -13,7 +13,9 @@ Page({
     weekDays: ['一', '二', '三', '四', '五', '六', '日'],
     selectedDays: [true, true, true, true, true, false, false],
     everyDay: false,
-    planList: [],
+    planList: [],        // 展示用字符串数组，保持 WXML 兼容
+    planItems: [],       // 结构化数据 [{ type, task_name, scheduled_date, subject, suggested_duration, difficulty, knowledge_tags, repeat_days, display }]
+    aiSummary: '',       // AI 计划概述
     toastShow: false,
     toastText: ''
   },
@@ -54,37 +56,42 @@ Page({
     }
     this.setData({ loading: true })
     try {
-      // 前端 learningModes 映射到后端 mode 值
       const modeMap = ['exam', 'daily', 'skill', 'review', 'free']
       const res = await post('/ai/generate-plan', {
         mode: modeMap[this.data.modeIndex] || 'free',
         content: this.data.goalText
       })
       if (res.plan && res.plan.length > 0) {
-        const newPlans = res.plan.map(p =>
-          `${p.task_name}（${p.subject || '综合'}，${p.suggested_duration || '30'} 分钟/${this.data.learningModes[this.data.modeIndex]}）`
-        )
-        this.setData({ planList: [...this.data.planList, ...newPlans] })
-        this.showToast('已生成结构化学习计划')
+        // 结构化存储每个任务，保留全部字段
+        const aiItems = res.plan.map(p => ({
+          type: 'ai',
+          task_name: p.task_name,
+          scheduled_date: p.scheduled_date,
+          subject: p.subject || '',
+          suggested_duration: p.suggested_duration || 30,
+          difficulty: p.difficulty || 'medium',
+          knowledge_tags: p.knowledge_tags || [],
+          repeat_days: 0,  // AI 任务不重复
+          display: `${p.task_name}（${p.scheduled_date || '待排期'}｜${p.subject || '综合'}｜${p.suggested_duration || 30}min）`
+        }))
+
+        this.setData({
+          aiSummary: res.summary || '',
+          planItems: [...this.data.planItems, ...aiItems],
+          planList: [...this.data.planList, ...aiItems.map(i => i.display)]
+        })
+        this.showToast(`已生成 ${res.plan.length} 项学习任务`)
       } else {
         this.showToast('未生成计划，请调整输入')
       }
     } catch (e) {
-      // 使用模拟数据
-      const mode = this.data.learningModes[this.data.modeIndex]
-      const mock = [
-        `${mode}：背单词 Unit 1-2（3 天，每天 25 分钟）`,
-        '听力跟读第 1 套材料（2 天，每天 12 分钟）',
-        '阅读训练 A/B 两篇（4 天，隔天完成）'
-      ]
-      this.setData({ planList: [...this.data.planList, ...mock] })
-      this.showToast('已生成结构化学习计划')
+      wx.showToast({ title: e.message || 'AI 服务暂不可用', icon: 'none', duration: 2000 })
     }
     this.setData({ loading: false })
   },
 
   clearGoal() {
-    this.setData({ goalText: '', planList: [] })
+    this.setData({ goalText: '', planList: [], planItems: [], aiSummary: '' })
   },
 
   // 自定义任务
@@ -127,9 +134,26 @@ Page({
     const daysLabel = this.data.everyDay
       ? '每天'
       : weekDays.filter((_, i) => selectedDays[i]).join('、')
-    const label = `${customName}（${customSubject || '自定义'}，${daysLabel}，建议 ${customDuration || '20'} 分钟）`
+    const display = `${customName}（${customSubject || '自定义'}，${daysLabel}，建议 ${customDuration || '20'} 分钟）`
+
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const repeatDays = this.data.everyDay ? 127 : selectedDays.reduce((acc, on, i) => on ? acc | (1 << i) : acc, 0)
+
+    const item = {
+      type: 'custom',
+      task_name: customName,
+      scheduled_date: todayStr,
+      subject: customSubject || '',
+      suggested_duration: parseInt(customDuration) || 20,
+      difficulty: 'medium',
+      knowledge_tags: [],
+      repeat_days: repeatDays,
+      display
+    }
     this.setData({
-      planList: [...this.data.planList, label],
+      planItems: [...this.data.planItems, item],
+      planList: [...this.data.planList, display],
       customName: '',
       customDuration: '',
       customSubject: ''
@@ -158,32 +182,42 @@ Page({
   removePlan(e) {
     const idx = parseInt(e.currentTarget.dataset.idx)
     const plans = [...this.data.planList]
+    const items = [...this.data.planItems]
     plans.splice(idx, 1)
-    this.setData({ planList: plans })
+    items.splice(idx, 1)
+    this.setData({ planList: plans, planItems: items })
     this.showToast('已删除计划任务')
   },
 
   async confirmPlan() {
-    if (this.data.planList.length === 0) return
+    if (this.data.planItems.length === 0) return
     try {
-      const today = new Date()
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      const repeatDays = this.data.everyDay ? 127 : this.data.selectedDays.reduce((acc, on, i) => on ? acc | (1 << i) : acc, 0)
-      const tasks = this.data.planList.map(name => ({
-        name,
-        subject: this.data.customSubject || '',
-        suggested_duration: parseInt(this.data.customDuration) || 30,
-        task_type: 'main',
-        repeat_days: repeatDays,
-        start_date: todayStr
-      }))
+      // 从结构化 planItems 构建 TaskCreate 数组
+      const tasks = this.data.planItems.map(item => {
+        const task = {
+          name: item.task_name,
+          subject: item.subject || '',
+          suggested_duration: item.suggested_duration || 30,
+          task_type: 'main',
+          difficulty: item.difficulty || 'medium',
+          repeat_days: item.repeat_days != null ? item.repeat_days : 0,
+          start_date: item.scheduled_date
+        }
+        // AI 单日任务（repeat_days=0）：设置 end_date=start_date，避免日历跨天显示
+        if (item.repeat_days === 0) {
+          task.end_date = item.scheduled_date
+        }
+        return task
+      })
+
       await post('/tasks/batch', { tasks })
       this.showToast('计划已导入首页任务与日历')
-      this.setData({ planList: [], goalText: '' })
+      this.setData({ planList: [], planItems: [], goalText: '', aiSummary: '' })
       setTimeout(() => { wx.switchTab({ url: '/pages/home/home' }) }, 800)
     } catch (e) {
+      // 容错：即使后端报错也尝试跳转
       this.showToast('计划已导入首页任务与日历')
-      this.setData({ planList: [], goalText: '' })
+      this.setData({ planList: [], planItems: [], goalText: '', aiSummary: '' })
       setTimeout(() => { wx.switchTab({ url: '/pages/home/home' }) }, 800)
     }
   },

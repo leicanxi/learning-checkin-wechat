@@ -1,4 +1,7 @@
-const app = getApp()
+function getAppGlobal() {
+  const app = getApp()
+  return app ? app.globalData : null
+}
 
 /**
  * 微信登录 & JWT 鉴权
@@ -8,15 +11,19 @@ function login() {
     wx.login({
       success(res) {
         if (res.code) {
+          const ga = getAppGlobal()
           wx.request({
-            url: `${app.globalData.baseURL}/auth/wechat-login`,
+            url: `${ga ? ga.baseURL : 'http://127.0.0.1:8000'}/auth/wechat-login`,
             method: 'POST',
             data: { code: res.code },
             success(response) {
               if (response.statusCode === 200 && response.data) {
                 const { access_token, user } = response.data
-                app.globalData.token = access_token
-                app.globalData.userInfo = user
+                const gl = getAppGlobal()
+                if (gl) {
+                  gl.token = access_token
+                  gl.userInfo = user
+                }
                 wx.setStorageSync('token', access_token)
                 wx.setStorageSync('userInfo', user)
                 resolve(user)
@@ -39,18 +46,25 @@ function checkLogin() {
   const token = wx.getStorageSync('token')
   const userInfo = wx.getStorageSync('userInfo')
   if (token) {
-    app.globalData.token = token
-    app.globalData.userInfo = userInfo
+    const gl = getAppGlobal()
+    if (gl) {
+      gl.token = token
+      gl.userInfo = userInfo
+    }
   }
 }
 
 function getToken() {
-  return app.globalData.token || wx.getStorageSync('token') || ''
+  const gl = getAppGlobal()
+  return (gl && gl.token) || wx.getStorageSync('token') || ''
 }
 
 function logout() {
-  app.globalData.token = ''
-  app.globalData.userInfo = null
+  const gl = getAppGlobal()
+  if (gl) {
+    gl.token = ''
+    gl.userInfo = null
+  }
   wx.removeStorageSync('token')
   wx.removeStorageSync('userInfo')
 }
