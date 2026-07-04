@@ -1,68 +1,59 @@
-"""
-日历服务路由
-"""
+"""Calendar routes based on flat task instances."""
 import calendar
-from datetime import datetime, date, timedelta
+import json
+from collections import defaultdict
+from datetime import date, datetime, timedelta
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from database import get_db
-from models import User, Task, Checkin
-from schemas import (
-    CalendarMonthResponse, CalendarDate,
-    CalendarTodayResponse, CalendarTomorrowResponse,
-    TodayTaskItem, TomorrowRecommendedTask,
-)
 from auth import get_current_user
+from database import get_db
+from models import Checkin, Task, User
+from schemas import (
+    CalendarDate,
+    CalendarMonthResponse,
+    CalendarTodayResponse,
+    CalendarTomorrowResponse,
+    TodayTaskItem,
+    TomorrowRecommendedTask,
+)
 
 router = APIRouter(prefix="/calendar", tags=["日历服务"])
 
 
-def get_day_status(
-    d: date,
-    checkin_dates: set,
-    rest_suggested_dates: set,
-    suggested_tasks_map: dict,
-    user_id: int,
-    db: Session,
-) -> CalendarDate:
-    """判断某天的状态"""
-    date_str = d.isoformat()
-    today = date.today()
+def parse_tags(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+        if isinstance(value, list):
+            return [str(item) for item in value]
+    except json.JSONDecodeError:
+        pass
+    return []
 
-    is_today = (d == today)
-    is_tomorrow = (d == today + timedelta(days=1))
-    is_rest = d in rest_suggested_dates
-    is_checked = d in checkin_dates
 
-    if is_checked:
-        status = "checked_in"
-    elif is_today:
-        status = "today"
-    elif is_rest:
-        status = "rest_suggested"
-    elif is_tomorrow and d in suggested_tasks_map:
-        status = "tomorrow_suggested"
-    elif (d > today) and (d not in suggested_tasks_map):
-        status = "pending"
-    else:
-        status = "missed"
-
-    # 当日打卡次数
-    checkin_count = 1 if is_checked else 0
-
-    preview = suggested_tasks_map.get(d, None)
-
-    return CalendarDate(
-        date=date_str,
-        day_of_week=d.weekday(),
-        status=status,
-        checkin_count=checkin_count,
-        is_today=is_today,
-        is_rest_suggested=is_rest,
-        suggested_tasks_preview=preview,
+def task_checkin_map(db: Session, user_id: int, tasks: list[Task]) -> dict[tuple[int, date], Checkin]:
+    task_ids = [task.id for task in tasks]
+    if not task_ids:
+        return {}
+    rows = (
+        db.query(Checkin)
+        .filter(Checkin.user_id == user_id, Checkin.task_id.in_(task_ids))
+        .all()
     )
+    return {
+        (row.task_id, row.checkin_date or row.checkin_time.date()): row
+        for row in rows
+    }
+
+
+def month_bounds(year: int, month: int) -> tuple[date, date]:
+    start = date(year, month, 1)
+    if month == 12:
+        return start, date(year + 1, 1, 1)
+    return start, date(year, month + 1, 1)
 
 
 @router.get("/month", response_model=CalendarMonthResponse)
@@ -72,98 +63,64 @@ async def get_month_calendar(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """获取日历月视图数据"""
-    # 获取当月所有打卡日期
-    month_start = date(year, month, 1)
-    if month == 12:
-        month_end = date(year + 1, 1, 1)
-    else:
-        month_end = date(year, month + 1, 1)
-
-    checkin_rows = (
-        db.query(func.date(Checkin.checkin_time).label("d"))
-        .filter(
-            Checkin.user_id == user.id,
-            Checkin.checkin_time >= month_start,
-            Checkin.checkin_time < month_end,
-        )
-        .group_by(func.date(Checkin.checkin_time))
-        .all()
-    )
-    checkin_dates = {datetime.strptime(r.d, "%Y-%m-%d").date() for r in checkin_rows}
-
-    # 获取当前连续天数判断是否需要休息建议
+    """Return calendar data for one month."""
+    month_start, month_end = month_bounds(year, month)
     today = date.today()
-    # 获取最近 7 天打卡天数
-    seven_days_ago = today - timedelta(days=7)
-    recent_checkins = (
-        db.query(func.count(func.distinct(func.date(Checkin.checkin_time))))
-        .filter(
-            Checkin.user_id == user.id,
-            Checkin.checkin_time >= seven_days_ago,
-        )
-        .scalar()
-    ) or 0
 
-    # 连续打卡 >= 7 天的休息建议（当月内未来日期）
-    rest_suggested_dates = set()
-    if recent_checkins >= 7:
-        for d_offset in range(1, 32):
-            future_date = today + timedelta(days=d_offset)
-            if future_date >= month_start and future_date < month_end:
-                rest_suggested_dates.add(future_date)
-
-    # 获取未来日期活跃的任务（按日期展开）
-    suggested_tasks_map = {}
-    future_tasks = (
+    tasks = (
         db.query(Task)
         .filter(
             Task.user_id == user.id,
-            Task.status == "active",
+            Task.status != "deleted",
+            Task.start_date >= month_start,
             Task.start_date < month_end,
         )
+        .order_by(Task.start_date.asc(), Task.created_at.asc())
         .all()
     )
-    for t in future_tasks:
-        cur = max(t.start_date, today)
-        stop = min(t.end_date, month_end) if t.end_date else month_end
-        # 包含单日任务：start_date == end_date 的情况
-        if cur == stop:
-            if cur not in suggested_tasks_map:
-                suggested_tasks_map[cur] = []
-            suggested_tasks_map[cur].append(t.name)
-        else:
-            while cur < stop:
-                if cur not in suggested_tasks_map:
-                    suggested_tasks_map[cur] = []
-                suggested_tasks_map[cur].append(t.name)
-                cur += timedelta(days=1)
+    checkins = task_checkin_map(db, user.id, tasks)
 
-    # 对于跨天任务：把 end_date 改为下次处理
-    # (上面已处理)<｜end▁of▁thinking｜>
+    tasks_by_date: dict[date, list[Task]] = defaultdict(list)
+    for task in tasks:
+        tasks_by_date[task.start_date].append(task)
 
-    # 构建日期列表
     dates = []
-    cal = calendar.monthcalendar(year, month)
-    for week in cal:
-        for day in week:
-            if day == 0:
-                dates.append(CalendarDate(
-                    date=f"{year}-{month:02d}-01",
-                    day_of_week=0,
-                    status="missed",
-                    checkin_count=0,
-                    is_today=False,
-                    is_rest_suggested=False,
-                ))
-                continue
-            d = date(year, month, day)
-            dates.append(get_day_status(d, checkin_dates, rest_suggested_dates, suggested_tasks_map, user.id, db))
+    days_in_month = calendar.monthrange(year, month)[1]
+    completed_tasks = 0
+    scheduled_tasks = len(tasks)
 
-    # 当月完成率
-    days_with_checks = len(checkin_dates)
-    total_days_in_month = calendar.monthrange(year, month)[1]
-    monthly_completion_rate = round(days_with_checks / total_days_in_month * 100, 1) if total_days_in_month > 0 else 0.0
+    for day in range(1, days_in_month + 1):
+        d = date(year, month, day)
+        day_tasks = tasks_by_date.get(d, [])
+        day_completed = [
+            task for task in day_tasks
+            if checkins.get((task.id, d)) is not None
+        ]
+        completed_tasks += len(day_completed)
+
+        if not day_tasks:
+            status = "empty"
+        elif len(day_completed) == len(day_tasks):
+            status = "checked_in"
+        elif d < today:
+            status = "missed"
+        else:
+            status = "pending"
+
+        dates.append(CalendarDate(
+            date=d.isoformat(),
+            day_of_week=d.weekday(),
+            status=status,
+            checkin_count=len(day_completed),
+            is_today=d == today,
+            is_rest_suggested=False,
+            suggested_tasks_preview=[task.name for task in day_tasks],
+        ))
+
+    monthly_completion_rate = (
+        round(completed_tasks / scheduled_tasks * 100, 1)
+        if scheduled_tasks else 0.0
+    )
 
     return CalendarMonthResponse(
         year=year,
@@ -178,54 +135,41 @@ async def get_today_tasks(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """获取今日任务列表"""
+    """Return today's task instances."""
     today = date.today()
-    today_start = datetime.combine(today, datetime.min.time())
-    today_end = datetime.combine(today + timedelta(days=1), datetime.min.time())
-
-    # 今日应完成的任务（start_date <= today，且未过期）
-    active_tasks = (
+    tasks = (
         db.query(Task)
         .filter(
             Task.user_id == user.id,
-            Task.status.in_(["active", "completed"]),
-            Task.start_date <= today,
-            (Task.end_date == None) | (Task.end_date >= today),
+            Task.status != "deleted",
+            Task.start_date == today,
         )
+        .order_by(Task.created_at.asc())
         .all()
     )
+    checkins = task_checkin_map(db, user.id, tasks)
 
-    # 今日已打卡的任务
-    today_checkins = (
-        db.query(Checkin.task_id)
-        .filter(
-            Checkin.user_id == user.id,
-            Checkin.checkin_time >= today_start,
-            Checkin.checkin_time < today_end,
-        )
-        .all()
-    )
-    checked_task_ids = {c.task_id for c in today_checkins}
-
-    tasks = []
-    checkin_count = len(checked_task_ids)
-
-    for task in active_tasks:
-        tasks.append(TodayTaskItem(
+    items = []
+    for task in tasks:
+        checkin = checkins.get((task.id, today))
+        items.append(TodayTaskItem(
             id=task.id,
             name=task.name,
+            task_date=task.start_date,
             subject=task.subject or "",
-            task_type=task.task_type,
-            suggested_duration=task.suggested_duration,
-            completed=task.id in checked_task_ids,
-            is_review=task.is_review_task,
+            suggested_duration=task.suggested_duration or 25,
+            difficulty=task.difficulty or "medium",
+            knowledge_tags=parse_tags(task.knowledge_tags),
+            source=task.source or ("ai" if task.is_ai_generated else "manual"),
+            completed=checkin is not None,
+            checkin_id=checkin.id if checkin else None,
         ))
 
     return CalendarTodayResponse(
         date=today.isoformat(),
-        tasks=tasks,
-        checkin_count=checkin_count,
-        total_tasks=len(tasks),
+        tasks=items,
+        checkin_count=sum(1 for item in items if item.completed),
+        total_tasks=len(items),
     )
 
 
@@ -234,48 +178,35 @@ async def get_tomorrow_tasks(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """获取明日推荐任务"""
+    """Return tomorrow's scheduled task instances."""
     tomorrow = date.today() + timedelta(days=1)
-
-    # 获取明天开始的活跃任务
-    tomorrow_tasks = (
+    tasks = (
         db.query(Task)
         .filter(
             Task.user_id == user.id,
-            Task.status == "active",
-            Task.start_date <= tomorrow,
-            (Task.end_date == None) | (Task.end_date >= tomorrow),
-            Task.is_review_task == False,
+            Task.status != "deleted",
+            Task.start_date == tomorrow,
         )
+        .order_by(Task.created_at.asc())
+        .limit(5)
         .all()
     )
 
-    # 检查是否需要休息
-    seven_days_ago = date.today() - timedelta(days=7)
-    recent_checkins = (
-        db.query(func.count(func.distinct(func.date(Checkin.checkin_time))))
-        .filter(
-            Checkin.user_id == user.id,
-            Checkin.checkin_time >= seven_days_ago,
-        )
-        .scalar()
-    ) or 0
-
-    rest_suggested = recent_checkins >= 7
-
-    recommended_tasks = []
-    for task in tomorrow_tasks[:5]:  # 最多推荐 5 个
-        recommended_tasks.append(TomorrowRecommendedTask(
-            task_name=task.name,
+    recommended_tasks = [
+        TomorrowRecommendedTask(
+            name=task.name,
+            task_date=task.start_date,
             subject=task.subject or "",
-            difficulty=task.difficulty,
-            suggested_duration=task.suggested_duration,
-            reason="明日计划任务" if not task.is_review_task else "基于遗忘曲线推荐复习",
-        ))
+            difficulty=task.difficulty or "medium",
+            suggested_duration=task.suggested_duration or 25,
+            reason="明日计划任务",
+        )
+        for task in tasks
+    ]
 
     return CalendarTomorrowResponse(
         date=tomorrow.isoformat(),
         recommended_tasks=recommended_tasks,
-        rest_suggested=rest_suggested,
-        rest_reason="已连续打卡7天，建议适当休息" if rest_suggested else "",
+        rest_suggested=False,
+        rest_reason="",
     )

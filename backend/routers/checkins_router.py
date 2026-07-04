@@ -1,17 +1,58 @@
-"""
-打卡记录路由
-"""
-from datetime import datetime, date, timedelta
+"""Check-in routes."""
+from datetime import date, datetime, timedelta
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from database import get_db
-from models import User, Task, Checkin
-from schemas import CheckinCreate, CheckinBackfill, CheckinUpdate, CheckinOut
 from auth import get_current_user
+from database import get_db
+from models import Checkin, Task, User
+from schemas import CheckinBackfill, CheckinCreate, CheckinOut, CheckinUpdate
 
 router = APIRouter(prefix="/checkins", tags=["打卡记录"])
+
+
+def parse_date_param(value: Optional[str], name: str) -> Optional[date]:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"{name} 格式错误，应为 YYYY-MM-DD")
+
+
+def get_existing_checkin(db: Session, user_id: int, task_id: int, checkin_date: date) -> Optional[Checkin]:
+    return (
+        db.query(Checkin)
+        .filter(
+            Checkin.user_id == user_id,
+            Checkin.task_id == task_id,
+            Checkin.checkin_date == checkin_date,
+        )
+        .first()
+    )
+
+
+def create_checkin_record(db: Session, user: User, task: Task, checkin_time: datetime) -> Checkin:
+    task_date = checkin_time.date()
+    existing = get_existing_checkin(db, user.id, task.id, task_date)
+    if existing:
+        return existing
+
+    checkin = Checkin(
+        user_id=user.id,
+        task_id=task.id,
+        subject=task.subject or "",
+        checkin_date=task_date,
+        checkin_time=checkin_time,
+        is_review=False,
+        review_round=0,
+    )
+    db.add(checkin)
+    db.commit()
+    db.refresh(checkin)
+    return checkin
 
 
 @router.post("/", response_model=CheckinOut)
@@ -20,61 +61,15 @@ async def create_checkin(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """完成打卡"""
-    # 校验任务存在且属于当前用户
+    """Create one check-in for a task instance."""
     task = db.query(Task).filter(Task.id == req.task_id, Task.user_id == user.id).first()
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    if task.status not in ("active", "completed"):
-        raise HTTPException(status_code=400, detail="任务不可打卡（已过期或已删除）")
+    if task.status in ("deleted", "expired"):
+        raise HTTPException(status_code=400, detail="任务不可打卡")
 
-    checkin_time = req.checkin_time or datetime.utcnow()
-
-    # 幂等性：同一用户同一任务同一天已有记录 → 返回已有记录
-    checkin_date_start = checkin_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    checkin_date_end = checkin_date_start + timedelta(days=1)
-    existing = (
-        db.query(Checkin)
-        .filter(
-            Checkin.user_id == user.id,
-            Checkin.task_id == req.task_id,
-            Checkin.checkin_time >= checkin_date_start,
-            Checkin.checkin_time < checkin_date_end,
-        )
-        .first()
-    )
-    if existing:
-        return CheckinOut.model_validate(existing)
-
-    checkin = Checkin(
-        user_id=user.id,
-        task_id=req.task_id,
-        subject=task.subject or "",
-        checkin_time=checkin_time,
-        is_review=req.is_review or False,
-        review_round=0,
-    )
-    db.add(checkin)
-    db.commit()
-    db.refresh(checkin)
-
-    # 标记任务完成状态
-    if task.task_type != "review":
-        all_today_checkins = (
-            db.query(Checkin)
-            .filter(
-                Checkin.task_id == task.id,
-                Checkin.checkin_time >= checkin_date_start,
-                Checkin.checkin_time < checkin_date_end,
-            )
-            .count()
-        )
-        if all_today_checkins >= 1 and task.status == "active":
-            task.status = "completed"
-            task.updated_at = datetime.utcnow()
-            db.commit()
-
+    checkin = create_checkin_record(db, user, task, req.checkin_time or datetime.utcnow())
     return CheckinOut.model_validate(checkin)
 
 
@@ -84,10 +79,7 @@ async def backfill_checkin(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    补打卡最近 7 天
-    """
-    # 校验日期范围
+    """Backfill one check-in within the latest 7 days."""
     today = date.today()
     min_date = today - timedelta(days=7)
     if req.checkin_date < min_date:
@@ -95,41 +87,12 @@ async def backfill_checkin(
     if req.checkin_date > today:
         raise HTTPException(status_code=400, detail="不可补未来的打卡")
 
-    # 校验任务
     task = db.query(Task).filter(Task.id == req.task_id, Task.user_id == user.id).first()
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    # 补打卡时间设为当天 12:00:00
     checkin_time = datetime.combine(req.checkin_date, datetime.min.time().replace(hour=12))
-
-    # 幂等检查
-    checkin_date_start = checkin_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    checkin_date_end = checkin_date_start + timedelta(days=1)
-    existing = (
-        db.query(Checkin)
-        .filter(
-            Checkin.user_id == user.id,
-            Checkin.task_id == req.task_id,
-            Checkin.checkin_time >= checkin_date_start,
-            Checkin.checkin_time < checkin_date_end,
-        )
-        .first()
-    )
-    if existing:
-        return CheckinOut.model_validate(existing)
-
-    checkin = Checkin(
-        user_id=user.id,
-        task_id=req.task_id,
-        subject=task.subject or "",
-        checkin_time=checkin_time,
-        is_review=False,
-        review_round=0,
-    )
-    db.add(checkin)
-    db.commit()
-    db.refresh(checkin)
+    checkin = create_checkin_record(db, user, task, checkin_time)
     return CheckinOut.model_validate(checkin)
 
 
@@ -143,25 +106,17 @@ async def list_checkins(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """获取打卡记录列表"""
-    query = db.query(Checkin).filter(Checkin.user_id == user.id)
+    """List check-ins."""
+    start = parse_date_param(start_date, "start_date")
+    end = parse_date_param(end_date, "end_date")
 
+    query = db.query(Checkin).filter(Checkin.user_id == user.id)
     if task_id:
         query = query.filter(Checkin.task_id == task_id)
-
-    if start_date:
-        try:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            query = query.filter(Checkin.checkin_time >= start_dt)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="start_date 格式错误，应为 YYYY-MM-DD")
-
-    if end_date:
-        try:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-            query = query.filter(Checkin.checkin_time < end_dt)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="end_date 格式错误，应为 YYYY-MM-DD")
+    if start:
+        query = query.filter(Checkin.checkin_date >= start)
+    if end:
+        query = query.filter(Checkin.checkin_date <= end)
 
     checkins = (
         query
@@ -170,7 +125,7 @@ async def list_checkins(
         .limit(limit)
         .all()
     )
-    return [CheckinOut.model_validate(c) for c in checkins]
+    return [CheckinOut.model_validate(checkin) for checkin in checkins]
 
 
 @router.get("/{checkin_id}", response_model=CheckinOut)
@@ -179,7 +134,7 @@ async def get_checkin(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """获取打卡详情"""
+    """Get one check-in."""
     checkin = (
         db.query(Checkin)
         .filter(Checkin.id == checkin_id, Checkin.user_id == user.id)
@@ -197,7 +152,7 @@ async def update_checkin(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """更新打卡记录"""
+    """Update one check-in."""
     checkin = (
         db.query(Checkin)
         .filter(Checkin.id == checkin_id, Checkin.user_id == user.id)
@@ -207,8 +162,11 @@ async def update_checkin(
         raise HTTPException(status_code=404, detail="打卡记录不存在")
 
     update_data = req.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(checkin, key, value)
+    if "checkin_time" in update_data and update_data["checkin_time"] is not None:
+        checkin.checkin_time = update_data["checkin_time"]
+        checkin.checkin_date = update_data["checkin_time"].date()
+    if "subject" in update_data and update_data["subject"] is not None:
+        checkin.subject = update_data["subject"]
 
     db.commit()
     db.refresh(checkin)
@@ -221,7 +179,7 @@ async def delete_checkin(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """删除打卡记录"""
+    """Delete one check-in."""
     checkin = (
         db.query(Checkin)
         .filter(Checkin.id == checkin_id, Checkin.user_id == user.id)

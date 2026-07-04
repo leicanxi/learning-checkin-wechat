@@ -57,6 +57,8 @@ class Task(Base):
     is_review_task = Column(Boolean, default=False)
     parent_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
     ai_review_intervals = Column(Text, nullable=True)  # JSON 数组字符串
+    knowledge_tags = Column(Text, nullable=True)
+    source = Column(String(20), default="manual")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -74,6 +76,7 @@ class Checkin(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     subject = Column(String(50), default="")
+    checkin_date = Column(Date, nullable=True)
     checkin_time = Column(DateTime, nullable=False)
     is_review = Column(Boolean, default=False)
     review_round = Column(Integer, default=0)
@@ -81,8 +84,8 @@ class Checkin(Base):
 
     # 复合唯一约束: 同一用户同一任务同一天只能有一条打卡记录
     __table_args__ = (
-        UniqueConstraint("user_id", "task_id", "checkin_time", name="uq_user_task_checkin"),
-        Index("idx_checkin_user_date", "user_id", "checkin_time"),
+        UniqueConstraint("user_id", "task_id", "checkin_date", name="uq_user_task_checkin_date"),
+        Index("idx_checkin_user_date", "user_id", "checkin_date"),
     )
 
     # 关系

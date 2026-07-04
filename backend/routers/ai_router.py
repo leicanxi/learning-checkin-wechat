@@ -242,41 +242,41 @@ async def generate_plan(
     # 4. 校验日期范围：今天 ~ 未来365天
     today = date.today()
     max_date = today + timedelta(days=365)
-    valid_plan = []
+    valid_tasks = []
 
-    plan_data = ai_result.get("plan", [])
+    plan_data = ai_result.get("tasks") or ai_result.get("plan", [])
     for item in plan_data:
+        raw_date = item.get("task_date") or item.get("scheduled_date")
         try:
-            scheduled = datetime.strptime(item["scheduled_date"], "%Y-%m-%d").date()
-        except (ValueError, KeyError):
+            scheduled = datetime.strptime(raw_date, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
             continue
 
         if today <= scheduled <= max_date:
-            valid_plan.append(AIPlanTask(
-                task_name=item.get("task_name", "未命名任务"),
-                scheduled_date=scheduled,
-                day_number=item.get("day_number", 0),
+            valid_tasks.append(AIPlanTask(
+                name=item.get("name") or item.get("task_name", "未命名任务"),
+                task_date=scheduled,
                 subject=item.get("subject", ""),
                 suggested_duration=item.get("suggested_duration", 25),
                 difficulty=item.get("difficulty", "medium"),
                 knowledge_tags=item.get("knowledge_tags", []),
-                review_round=0,
+                source="ai",
             ))
 
-    if not valid_plan:
+    if not valid_tasks:
         raise HTTPException(
             status_code=422,
             detail="AI 无法生成有效的日期计划，请调整输入内容后重试",
         )
 
-    total_days = max(p.day_number for p in valid_plan) if valid_plan else 0
+    total_days = len({task.task_date for task in valid_tasks})
 
     return AIGeneratePlanResponse(
         mode=mode,
         mode_inferred=False,
         total_days=total_days,
         summary=ai_result.get("summary", ""),
-        plan=valid_plan,
+        tasks=valid_tasks,
     )
 
 
@@ -324,7 +324,7 @@ async def get_ai_progress(
     # 获取用户的总任务数和打卡数
     active_tasks = db.query(Task).filter(
         Task.user_id == user.id,
-        Task.status.in_(["active", "completed"]),
+        Task.status != "deleted",
     ).count()
 
     total_checkins = db.query(Checkin).filter(

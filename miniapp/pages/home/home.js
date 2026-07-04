@@ -14,7 +14,7 @@ Page({
     weekRate: 0,
     monthRate: 0,
     rankLabel: '--',
-    heroCopy: '你已经进入稳定期。今天保持 3 个学习动作即可，不需要额外加量。',
+    heroCopy: '先完成今天的任务，保持稳定节奏。',
     tasks: [],
     toastShow: false,
     toastText: ''
@@ -33,57 +33,33 @@ Page({
   async loadAll() {
     const ts = todayStr()
     try {
-      const [tasksRes, statsRes, checkinsRes] = await Promise.all([
-        get('/tasks/', { status: 'active' }).catch(() => null),
-        get('/stats/').catch(() => null),
-        get('/checkins/', { start_date: ts, end_date: ts }).catch(() => null)
+      const [tasksRes, statsRes] = await Promise.all([
+        get('/tasks/', { date: ts }).catch(() => []),
+        get('/stats/').catch(() => null)
       ])
 
-      // 处理任务 —— 后端返回 TaskOut 数组，用 status=active 过滤后前端按 start_date 筛选今天
-      const allTasks = (tasksRes && Array.isArray(tasksRes)) ? tasksRes : []
-      const tasks = allTasks.filter(t => {
-        if (!t.start_date) return true
-        const start = t.start_date.split('T')[0]
-        if (start > ts) return false
-        // 有 end_date 且已过期则排除
-        if (t.end_date) {
-          const end = t.end_date.split('T')[0]
-          if (end < ts) return false
-        }
-        return true
-      })
+      const tasks = Array.isArray(tasksRes) ? tasksRes : []
+      const formattedTasks = tasks.map(t => ({
+        ...t,
+        timeTip: t.suggested_duration ? `建议 ${t.suggested_duration} 分钟` : '',
+        subject: t.subject || '未分类',
+        tagClass: t.source === 'ai' ? 'sage' : 'ink',
+        tagLabel: t.source === 'ai' ? 'AI' : '手动'
+      }))
 
-      const checkinIds = new Set(
-        checkinsRes && Array.isArray(checkinsRes)
-          ? checkinsRes.map(c => c.task_id)
-          : []
-      )
-      const formattedTasks = tasks.map(t => {
-        const done = checkinIds.has(t.id)
-        return {
-          ...t,
-          done,
-          timeTip: t.suggested_duration ? `建议 ${t.suggested_duration} 分钟` : '',
-          subject: t.subject || '未分类',
-          tagClass: t.task_type === 'main' ? 'ink' : (t.task_type === 'light' ? 'sage' : 'clay'),
-          tagLabel: t.task_type === 'main' ? '主任务' : (t.task_type === 'light' ? '轻量' : '复习')
-        }
-      })
-
-      // 统计数据
       const total = formattedTasks.length
-      const doneCount = formattedTasks.filter(t => t.done).length
-
+      const doneCount = formattedTasks.filter(t => t.completed).length
       const stats = statsRes || {}
+
       this.setData({
         tasks: formattedTasks,
         streakDays: stats.current_streak || 0,
-        weekRate: stats.weekly_rate != null ? Math.round(stats.weekly_rate) : (total > 0 ? Math.round(doneCount / total * 100) : 0),
+        weekRate: stats.weekly_rate != null ? Math.round(stats.weekly_rate) : 0,
         monthRate: stats.monthly_rate != null ? Math.round(stats.monthly_rate) : 0,
         rankLabel: '--',
         heroCopy: doneCount === total && total > 0
-          ? '今日任务已完成。系统已同步到日历与统计，明天会推荐低压力复习任务。'
-          : '你已经进入稳定期。今天保持 3 个学习动作即可，不需要额外加量。'
+          ? '今日任务已完成，日历和统计会自动同步。'
+          : '先完成今天的任务，保持稳定节奏。'
       })
     } catch (e) {
       console.error('加载首页数据失败:', e)
@@ -91,14 +67,11 @@ Page({
   },
 
   async toggleTask(e) {
-    const { id, done } = e.currentTarget.dataset
-    const ts = todayStr()
-    if (done) {
+    const { id, completed, checkinId } = e.currentTarget.dataset
+    if (completed) {
       try {
-        const res = await get('/checkins/', { start_date: ts, end_date: ts })
-        const record = res.find(c => c.task_id === id)
-        if (record) {
-          await del(`/checkins/${record.id}`)
+        if (checkinId) {
+          await del(`/checkins/${checkinId}`)
           this.showToast('已取消打卡')
         }
       } catch (e) {
@@ -107,7 +80,7 @@ Page({
     } else {
       try {
         await post('/checkins/', { task_id: id })
-        this.showToast('打卡成功！')
+        this.showToast('打卡成功')
       } catch (e) {
         this.showToast('打卡失败')
       }
