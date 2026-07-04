@@ -2,20 +2,115 @@
 设置与小组路由
 """
 import uuid
-from datetime import datetime, time
+from datetime import date, datetime, time, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from database import get_db
-from models import User, Checkin, Group, UserGroup
+from models import User, Checkin, Group, UserGroup, Task
 from schemas import (
     ReminderSettings, GroupOut, MyGroupResponse,
     CreateGroupRequest, JoinGroupRequest, UpdateGroupRequest,
+    GroupMemberOut,
 )
 from auth import get_current_user
+from routers.ranking_router import calculate_regularity_score, determine_rank_range, RANK_LABELS
 
 router = APIRouter(tags=["设置与小组"])
+
+
+def weekly_completion_rate(user_id: int, db: Session) -> float:
+    today = date.today()
+    start = today - timedelta(days=6)
+    tasks = (
+        db.query(Task)
+        .filter(
+            Task.user_id == user_id,
+            Task.status != "deleted",
+            Task.start_date >= start,
+            Task.start_date <= today,
+        )
+        .all()
+    )
+    if not tasks:
+        return 0.0
+
+    task_ids = [task.id for task in tasks]
+    checkins = (
+        db.query(Checkin.task_id, Checkin.checkin_date)
+        .filter(Checkin.user_id == user_id, Checkin.task_id.in_(task_ids))
+        .all()
+    )
+    completed = {
+        (row.task_id, row.checkin_date)
+        for row in checkins
+    }
+    done = sum(1 for task in tasks if (task.id, task.start_date) in completed)
+    return round(done / len(tasks) * 100, 1)
+
+
+def group_member_ids(group_id: int, db: Session) -> list[int]:
+    rows = db.query(UserGroup.user_id).filter(UserGroup.group_id == group_id).all()
+    return [row.user_id for row in rows]
+
+
+def group_completion_rate(group_id: int, db: Session) -> float:
+    member_ids = group_member_ids(group_id, db)
+    if not member_ids:
+        return 0.0
+    rates = [weekly_completion_rate(member_id, db) for member_id in member_ids]
+    return round(sum(rates) / len(rates), 1) if rates else 0.0
+
+
+def user_group_role(user: User, group: Group | None) -> str:
+    if not group:
+        return "none"
+    return "owner" if group.creator_id == user.id else "member"
+
+
+def group_rank_for_user(user_id: int, member_ids: list[int], db: Session) -> tuple[str, str]:
+    user_score = calculate_regularity_score(user_id, db)
+    scores = [
+        calculate_regularity_score(member_id, db)
+        for member_id in member_ids
+    ]
+    valid_scores = [score for score in scores if score >= 0]
+    rank_range = determine_rank_range(valid_scores, user_score)
+    return rank_range, RANK_LABELS.get(rank_range, "数据不足")
+
+
+def build_group_out(group: Group, db: Session, include_invite: bool = False) -> GroupOut:
+    member_count = (
+        db.query(func.count(UserGroup.user_id))
+        .filter(UserGroup.group_id == group.id)
+        .scalar()
+    ) or 0
+    return GroupOut(
+        id=group.id,
+        name=group.name,
+        description=group.description,
+        invite_code=group.invite_code if include_invite else "",
+        creator_id=group.creator_id,
+        member_count=member_count,
+        completion_rate=group_completion_rate(group.id, db),
+        created_at=group.created_at,
+    )
+
+
+def require_group_member(user: User, group_id: int, db: Session) -> Group:
+    membership = (
+        db.query(UserGroup)
+        .filter(UserGroup.user_id == user.id, UserGroup.group_id == group_id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail="你不在该小组中")
+
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="小组不存在")
+    return group
 
 
 # =============================================================================
@@ -132,34 +227,20 @@ async def get_my_group(
     )
 
     if not user_group:
-        return MyGroupResponse(group=None, my_rank_range=None)
+        return MyGroupResponse(group=None, my_group_role="none", my_rank_range=None, my_rank_range_label=None)
 
     group = db.query(Group).filter(Group.id == user_group.group_id).first()
     if not group:
-        return MyGroupResponse(group=None, my_rank_range=None)
+        return MyGroupResponse(group=None, my_group_role="none", my_rank_range=None, my_rank_range_label=None)
 
-    # 计算小组成员数和完成率
-    member_count = (
-        db.query(func.count(UserGroup.user_id))
-        .filter(UserGroup.group_id == group.id)
-        .scalar()
-    ) or 0
-
-    # 计算小组完成率（所有成员近7天打卡率的平均）
-    completion_rate = 0.0
+    role = user_group_role(user, group)
+    rank_range, rank_label = group_rank_for_user(user.id, group_member_ids(group.id, db), db)
 
     return MyGroupResponse(
-        group=GroupOut(
-            id=group.id,
-            name=group.name,
-            description=group.description,
-            invite_code=group.invite_code,
-            creator_id=group.creator_id,
-            member_count=member_count,
-            completion_rate=round(completion_rate, 1),
-            created_at=group.created_at,
-        ),
-        my_rank_range=None,
+        group=build_group_out(group, db, include_invite=role == "owner"),
+        my_group_role=role,
+        my_rank_range=rank_range,
+        my_rank_range_label=rank_label,
     )
 
 
@@ -172,6 +253,10 @@ async def create_group(
     """创建小组 + 自动生成邀请码，创建者自动加入"""
     import random
     import string
+
+    existing_membership = db.query(UserGroup).filter(UserGroup.user_id == user.id).first()
+    if existing_membership:
+        raise HTTPException(status_code=400, detail="你已加入小组，暂不支持同时加入多个小组")
 
     # 生成唯一邀请码（8位字母数字）
     invite_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -199,16 +284,7 @@ async def create_group(
     db.add(user_group)
     db.commit()
 
-    return GroupOut(
-        id=group.id,
-        name=group.name,
-        description=group.description,
-        invite_code=group.invite_code,
-        creator_id=group.creator_id,
-        member_count=1,
-        completion_rate=0.0,
-        created_at=group.created_at,
-    )
+    return build_group_out(group, db, include_invite=True)
 
 
 @router.post("/groups/join", response_model=MyGroupResponse)
@@ -218,6 +294,10 @@ async def join_group(
     db: Session = Depends(get_db),
 ):
     """通过邀请码加入小组"""
+    existing_membership = db.query(UserGroup).filter(UserGroup.user_id == user.id).first()
+    if existing_membership:
+        raise HTTPException(status_code=400, detail="你已加入小组，暂不支持同时加入多个小组")
+
     group = db.query(Group).filter(Group.invite_code == req.invite_code).first()
     if not group:
         raise HTTPException(status_code=404, detail="邀请码无效，未找到对应小组")
@@ -238,24 +318,13 @@ async def join_group(
     db.add(user_group)
     db.commit()
 
-    member_count = (
-        db.query(func.count(UserGroup.user_id))
-        .filter(UserGroup.group_id == group.id)
-        .scalar()
-    ) or 0
+    rank_range, rank_label = group_rank_for_user(user.id, group_member_ids(group.id, db), db)
 
     return MyGroupResponse(
-        group=GroupOut(
-            id=group.id,
-            name=group.name,
-            description=group.description,
-            invite_code=group.invite_code,
-            creator_id=group.creator_id,
-            member_count=member_count,
-            completion_rate=0.0,
-            created_at=group.created_at,
-        ),
-        my_rank_range=None,
+        group=build_group_out(group, db, include_invite=False),
+        my_group_role="member",
+        my_rank_range=rank_range,
+        my_rank_range_label=rank_label,
     )
 
 
@@ -282,19 +351,102 @@ async def update_group(
     db.commit()
     db.refresh(group)
 
+    return build_group_out(group, db, include_invite=True)
+
+
+@router.get("/groups/{group_id}/members", response_model=list[GroupMemberOut])
+async def list_group_members(
+    group_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """查看小组成员概览（仅小组成员可看）"""
+    group = require_group_member(user, group_id, db)
+    member_ids = group_member_ids(group.id, db)
+    rank_scores = {
+        member_id: calculate_regularity_score(member_id, db)
+        for member_id in member_ids
+    }
+    valid_scores = [score for score in rank_scores.values() if score >= 0]
+
+    rows = (
+        db.query(UserGroup, User)
+        .join(User, User.id == UserGroup.user_id)
+        .filter(UserGroup.group_id == group.id)
+        .order_by(UserGroup.joined_at.asc())
+        .all()
+    )
+
+    result = []
+    for membership, member in rows:
+        rank_range = determine_rank_range(valid_scores, rank_scores.get(member.id, -1.0))
+        result.append(GroupMemberOut(
+            user_id=member.id,
+            nickname=member.nickname or "用户",
+            role="owner" if member.id == group.creator_id else "member",
+            weekly_completion_rate=weekly_completion_rate(member.id, db),
+            rank_range=rank_range,
+            rank_range_label=RANK_LABELS.get(rank_range, "数据不足"),
+            joined_at=membership.joined_at,
+        ))
+    return result
+
+
+@router.delete("/groups/leave")
+async def leave_group(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """普通成员退出小组；组长仅在无其他成员时可退出并删除小组"""
+    membership = db.query(UserGroup).filter(UserGroup.user_id == user.id).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="你尚未加入小组")
+
+    group = db.query(Group).filter(Group.id == membership.group_id).first()
+    if not group:
+        db.delete(membership)
+        db.commit()
+        return {"message": "已退出小组"}
+
     member_count = (
         db.query(func.count(UserGroup.user_id))
         .filter(UserGroup.group_id == group.id)
         .scalar()
     ) or 0
+    if group.creator_id == user.id and member_count > 1:
+        raise HTTPException(status_code=400, detail="组长需先移除其他成员后才能退出小组")
 
-    return GroupOut(
-        id=group.id,
-        name=group.name,
-        description=group.description,
-        invite_code=group.invite_code,
-        creator_id=group.creator_id,
-        member_count=member_count,
-        completion_rate=0.0,
-        created_at=group.created_at,
+    db.delete(membership)
+    if group.creator_id == user.id:
+        db.delete(group)
+    db.commit()
+    return {"message": "已退出小组"}
+
+
+@router.delete("/groups/{group_id}/members/{member_id}")
+async def remove_group_member(
+    group_id: int,
+    member_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """组长移除小组成员"""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="小组不存在")
+    if group.creator_id != user.id:
+        raise HTTPException(status_code=403, detail="仅组长可移除成员")
+    if member_id == user.id:
+        raise HTTPException(status_code=400, detail="组长不能移除自己")
+
+    membership = (
+        db.query(UserGroup)
+        .filter(UserGroup.group_id == group.id, UserGroup.user_id == member_id)
+        .first()
     )
+    if not membership:
+        raise HTTPException(status_code=404, detail="成员不存在")
+
+    db.delete(membership)
+    db.commit()
+    return {"message": "已移除成员"}

@@ -5,7 +5,11 @@ Page({
   data: {
     year: 2026,
     month: 7,
+    selectedDate: '',
+    calendarMode: 'month',
+    calendarModeText: '周',
     monthTitle: '',
+    monthlyCompletionRate: 0,
     cells: [],
     completionRate: 0,
     todayData: null,
@@ -24,12 +28,18 @@ Page({
 
   onShow() {
     const d = new Date()
+    const todayStr = this.formatDate(d)
     this.setData({
       year: d.getFullYear(),
       month: d.getMonth() + 1,
+      selectedDate: todayStr,
       monthTitle: `${d.getFullYear()} 年 ${d.getMonth() + 1} 月`
     })
     this.fetchAll()
+  },
+
+  formatDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   },
 
   async fetchAll() {
@@ -45,6 +55,7 @@ Page({
       this.buildCells(monthData, monthRes && monthRes.monthly_completion_rate)
       this.setData({
         monthData,
+        monthlyCompletionRate: monthRes ? monthRes.monthly_completion_rate : 0,
         todayData: todayRes || null,
         tomorrowData: tomorrowRes || null
       })
@@ -60,44 +71,73 @@ Page({
     const daysInMonth = lastDay.getDate()
     const startDow = firstDay.getDay()
     const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const cells = []
+    const todayStr = this.formatDate(today)
+    const monthCells = []
 
     // 前置空白
     for (let i = 0; i < startDow; i++) {
-      cells.push({ day: '', muted: true, cls: 'date-btn muted' })
+      monthCells.push({ day: '', muted: true, cls: 'date-btn muted' })
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
       const ds = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      const dayData = monthData[ds]
-      const dow = new Date(year, month - 1, d).getDay()
-
-      let cls = 'date-btn'
-      let status = ''
-
-      // 用后端返回的 status 字段判断
-      if (dayData) {
-        switch (dayData.status) {
-          case 'checked_in':
-            cls += ' done'; status = '已打卡'; break
-          case 'missed':
-            cls += ' missed'; status = '未打卡'; break
-          case 'pending':
-            cls += ds === todayStr ? ' today' : ' pending'; status = ds === todayStr ? '今日' : '待完成'; break
-          case 'empty':
-            status = ''; break
-        }
-      } else {
-        status = ''
-      }
-
-      cells.push({ day: d, muted: false, cls, status, date: ds })
+      monthCells.push(this.buildDateCell(ds, d, monthData[ds], todayStr))
     }
 
-    // 优先用后端的完成率
-    const rate = backendRate != null ? Math.round(backendRate) : this.calcRate(cells)
+    const cells = this.data.calendarMode === 'week'
+      ? this.buildWeekCells(monthData, todayStr)
+      : monthCells
+    const rate = this.data.calendarMode === 'week'
+      ? this.calcTaskRateForDates(cells.map(c => c.date).filter(Boolean), monthData)
+      : (backendRate != null ? Math.round(backendRate) : this.calcRate(cells))
     this.setData({ cells, completionRate: rate })
+  },
+
+  buildDateCell(ds, day, dayData, todayStr) {
+    let cls = 'date-btn'
+    let status = ''
+
+    if (dayData) {
+      switch (dayData.status) {
+        case 'checked_in':
+          cls += ' done'; status = '已打卡'; break
+        case 'missed':
+          cls += ' missed'; status = '未打卡'; break
+        case 'pending':
+          cls += ds === todayStr ? ' today' : ' pending'; status = ds === todayStr ? '今日' : '待完成'; break
+        case 'empty':
+          status = ''; break
+      }
+    }
+
+    return { day, muted: false, cls, status, date: ds }
+  },
+
+  buildWeekCells(monthData, todayStr) {
+    const anchor = this.data.selectedDate ? new Date(this.data.selectedDate) : new Date()
+    const start = new Date(anchor)
+    start.setDate(anchor.getDate() - anchor.getDay())
+    const cells = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      const ds = this.formatDate(d)
+      cells.push(this.buildDateCell(ds, d.getDate(), monthData[ds], todayStr))
+    }
+    return cells
+  },
+
+  calcTaskRateForDates(dates, monthData) {
+    let total = 0
+    let completed = 0
+    dates.forEach(ds => {
+      const dayData = monthData[ds]
+      if (!dayData) return
+      const taskCount = (dayData.suggested_tasks_preview || []).length
+      total += taskCount
+      completed += Math.min(dayData.checkin_count || 0, taskCount)
+    })
+    return total > 0 ? Math.round(completed / total * 100) : 0
   },
 
   calcRate(cells) {
@@ -105,6 +145,15 @@ Page({
     if (valid.length === 0) return 0
     const done = valid.filter(c => c.status === '已打卡').length
     return Math.round(done / valid.length * 100)
+  },
+
+  toggleCalendarMode() {
+    const nextMode = this.data.calendarMode === 'month' ? 'week' : 'month'
+    this.setData({
+      calendarMode: nextMode,
+      calendarModeText: nextMode === 'month' ? '周' : '月'
+    })
+    this.buildCells(this.data.monthData || {}, this.data.monthlyCompletionRate)
   },
 
   onDateTap(e) {
@@ -151,6 +200,7 @@ Page({
     }
 
     this.setData({
+      selectedDate: date,
       sheetShow: true,
       sheetTitle: displayDate,
       sheetText: text
@@ -165,7 +215,12 @@ Page({
     let { year, month } = this.data
     month--
     if (month < 1) { month = 12; year-- }
-    this.setData({ year, month, monthTitle: `${year} 年 ${month} 月` })
+    this.setData({
+      year,
+      month,
+      selectedDate: `${year}-${String(month).padStart(2, '0')}-01`,
+      monthTitle: `${year} 年 ${month} 月`
+    })
     this.fetchAll()
   },
 
@@ -173,7 +228,12 @@ Page({
     let { year, month } = this.data
     month++
     if (month > 12) { month = 1; year++ }
-    this.setData({ year, month, monthTitle: `${year} 年 ${month} 月` })
+    this.setData({
+      year,
+      month,
+      selectedDate: `${year}-${String(month).padStart(2, '0')}-01`,
+      monthTitle: `${year} 年 ${month} 月`
+    })
     this.fetchAll()
   }
 })

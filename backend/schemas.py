@@ -354,10 +354,23 @@ class GroupOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class GroupMemberOut(BaseModel):
+    """小组成员概览"""
+    user_id: int
+    nickname: str
+    role: str = "member"
+    weekly_completion_rate: float = 0.0
+    rank_range: str = "insufficient"
+    rank_range_label: str = "数据不足"
+    joined_at: Optional[datetime] = None
+
+
 class MyGroupResponse(BaseModel):
     """我的小组响应"""
     group: Optional[GroupOut] = None
+    my_group_role: str = "none"
     my_rank_range: Optional[str] = None
+    my_rank_range_label: Optional[str] = None
 
 
 class CreateGroupRequest(BaseModel):

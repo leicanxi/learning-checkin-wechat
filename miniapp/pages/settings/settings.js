@@ -1,4 +1,4 @@
-const { get, put, post } = require('../../utils/api')
+const { get, put, post, del } = require('../../utils/api')
 const auth = require('../../utils/auth')
 
 Page({
@@ -11,7 +11,14 @@ Page({
     taskDeadline: false,
     reminderTime: '21:10',
     groupName: '',
-    groupInfo: ''
+    groupInfo: '',
+    groupId: null,
+    groupRole: 'none',
+    groupInviteCode: '',
+    groupMembers: [],
+    groupSheetShow: false,
+    groupSheetTitle: '',
+    groupSheetMode: 'detail'
   },
 
   onShow() {
@@ -125,13 +132,28 @@ Page({
   async loadGroupInfo() {
     try {
       const res = await get('/groups/my')
-      const group = res.group || res
+      const group = res.group
+      if (!group) {
+        this.setData({
+          groupName: '',
+          groupInfo: '',
+          groupId: null,
+          groupRole: 'none',
+          groupInviteCode: '',
+          groupMembers: []
+        })
+        return
+      }
+      const rankLabel = res.my_rank_range_label || '数据不足'
       this.setData({
+        groupId: group.id,
         groupName: group.name || '',
-        groupInfo: `${group.member_count || 0} 名成员 · 本周完成率 ${group.completion_rate || 0}%`
+        groupRole: res.my_group_role || 'member',
+        groupInviteCode: group.invite_code || '',
+        groupInfo: `${group.member_count || 0} 名成员 · 本周小组完成率 ${group.completion_rate || 0}% · 我的区间${rankLabel}`
       })
     } catch (e) {
-      // 未加入小组
+      this.setData({ groupName: '', groupInfo: '', groupId: null, groupRole: 'none', groupMembers: [] })
     }
   },
 
@@ -171,11 +193,107 @@ Page({
   },
 
   joinGroup() {
-    wx.showToast({ title: '功能开发中', icon: 'none', duration: 1500 })
+    wx.showModal({
+      title: '加入小组',
+      editable: true,
+      placeholderText: '输入邀请码',
+      success: async (res) => {
+        if (!res.confirm || !res.content) return
+        try {
+          await post('/groups/join', { invite_code: res.content.trim().toUpperCase() })
+          await this.loadGroupInfo()
+          wx.showToast({ title: '加入成功', icon: 'success' })
+        } catch (e) {
+          wx.showToast({ title: e.message || '加入失败', icon: 'none' })
+        }
+      }
+    })
   },
 
-  manageGroup() {
-    wx.showToast({ title: '功能开发中', icon: 'none', duration: 1500 })
+  createGroup() {
+    wx.showModal({
+      title: '创建小组',
+      editable: true,
+      placeholderText: '输入小组名称',
+      success: async (res) => {
+        if (!res.confirm || !res.content) return
+        try {
+          await post('/groups/', { name: res.content.trim(), description: '' })
+          await this.loadGroupInfo()
+          wx.showToast({ title: '创建成功', icon: 'success' })
+        } catch (e) {
+          wx.showToast({ title: e.message || '创建失败', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  async loadGroupMembers() {
+    if (!this.data.groupId) return
+    try {
+      const members = await get(`/groups/${this.data.groupId}/members`)
+      this.setData({ groupMembers: members || [] })
+    } catch (e) {
+      wx.showToast({ title: e.message || '成员加载失败', icon: 'none' })
+    }
+  },
+
+  async openMyGroup() {
+    await this.loadGroupMembers()
+    this.setData({
+      groupSheetShow: true,
+      groupSheetMode: 'detail',
+      groupSheetTitle: '我的小组'
+    })
+  },
+
+  async manageGroup() {
+    await this.loadGroupMembers()
+    this.setData({
+      groupSheetShow: true,
+      groupSheetMode: 'manage',
+      groupSheetTitle: '管理小组'
+    })
+  },
+
+  closeGroupSheet() {
+    this.setData({ groupSheetShow: false })
+  },
+
+  leaveGroup() {
+    wx.showModal({
+      title: '退出小组',
+      content: '退出后将不再参与该小组排名，确定退出吗？',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await del('/groups/leave')
+          await this.loadGroupInfo()
+          wx.showToast({ title: '已退出', icon: 'success' })
+        } catch (e) {
+          wx.showToast({ title: e.message || '退出失败', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  removeMember(e) {
+    const memberId = e.currentTarget.dataset.id
+    wx.showModal({
+      title: '移除成员',
+      content: '确定将该成员移出小组吗？',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await del(`/groups/${this.data.groupId}/members/${memberId}`)
+          await this.loadGroupMembers()
+          await this.loadGroupInfo()
+          wx.showToast({ title: '已移除', icon: 'success' })
+        } catch (e) {
+          wx.showToast({ title: e.message || '移除失败', icon: 'none' })
+        }
+      }
+    })
   },
 
   exportPDF() {

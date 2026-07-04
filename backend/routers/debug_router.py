@@ -1,5 +1,6 @@
 """Temporary local debug console for test task data."""
 import json
+import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
@@ -8,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Checkin, Task, User
+from models import Checkin, Group, Task, User, UserGroup
 
 router = APIRouter(prefix="/debug", tags=["临时调试后台"])
 
@@ -112,6 +113,41 @@ def make_debug_task(user_id: int, payload: dict[str, Any]) -> Task:
     )
 
 
+def serialize_group(db: Session, group: Group, selected_user_id: int | None = None) -> dict[str, Any]:
+    member_count = (
+        db.query(UserGroup)
+        .filter(UserGroup.group_id == group.id)
+        .count()
+    )
+    role = "none"
+    if selected_user_id:
+        membership = (
+            db.query(UserGroup)
+            .filter(UserGroup.group_id == group.id, UserGroup.user_id == selected_user_id)
+            .first()
+        )
+        if membership:
+          role = "owner" if group.creator_id == selected_user_id else "member"
+
+    return {
+        "id": group.id,
+        "name": group.name,
+        "description": group.description or "",
+        "invite_code": group.invite_code,
+        "creator_id": group.creator_id,
+        "member_count": member_count,
+        "role_for_selected_user": role,
+        "created_at": group.created_at.isoformat() if group.created_at else "",
+    }
+
+
+def get_user_group(db: Session, user_id: int) -> Group | None:
+    membership = db.query(UserGroup).filter(UserGroup.user_id == user_id).first()
+    if not membership:
+        return None
+    return db.query(Group).filter(Group.id == membership.group_id).first()
+
+
 @router.get("/tasks", response_class=HTMLResponse)
 async def debug_tasks_page():
     return HTMLResponse(DEBUG_TASKS_HTML)
@@ -135,7 +171,7 @@ async def list_debug_users(db: Session = Depends(get_db)):
 @router.post("/api/users")
 async def create_debug_user(payload: dict[str, Any], db: Session = Depends(get_db)):
     nickname = (payload.get("nickname") or "Debug User").strip()
-    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    stamp = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
     user = User(
         nickname=nickname,
         email=f"debug-{stamp}@example.com",
@@ -145,6 +181,131 @@ async def create_debug_user(payload: dict[str, Any], db: Session = Depends(get_d
     db.commit()
     db.refresh(user)
     return {"id": user.id, "nickname": user.nickname, "email": user.email, "openid": user.openid}
+
+
+@router.get("/api/users/{user_id}/group")
+async def get_debug_user_group(user_id: int, db: Session = Depends(get_db)):
+    group = get_user_group(db, user_id)
+    if not group:
+        return {"group": None, "members": []}
+    members = debug_group_members(group.id, db)
+    return {"group": serialize_group(db, group, user_id), "members": members}
+
+
+@router.get("/api/groups")
+async def list_debug_groups(db: Session = Depends(get_db)):
+    groups = db.query(Group).order_by(Group.created_at.desc()).limit(100).all()
+    return [serialize_group(db, group) for group in groups]
+
+
+@router.post("/api/groups")
+async def create_debug_group(payload: dict[str, Any], db: Session = Depends(get_db)):
+    import random
+    import string
+
+    user_id = int(payload.get("user_id") or 0)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    if get_user_group(db, user_id):
+        raise HTTPException(status_code=400, detail="user already has a group")
+
+    invite_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    while db.query(Group).filter(Group.invite_code == invite_code).first():
+        invite_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+    group = Group(
+        name=(payload.get("name") or "Debug Group").strip(),
+        description=payload.get("description") or "",
+        invite_code=invite_code,
+        creator_id=user_id,
+    )
+    db.add(group)
+    db.flush()
+    db.add(UserGroup(user_id=user_id, group_id=group.id))
+    db.commit()
+    db.refresh(group)
+    return serialize_group(db, group, user_id)
+
+
+@router.post("/api/groups/join")
+async def join_debug_group(payload: dict[str, Any], db: Session = Depends(get_db)):
+    user_id = int(payload.get("user_id") or 0)
+    invite_code = (payload.get("invite_code") or "").strip().upper()
+    if not db.query(User).filter(User.id == user_id).first():
+        raise HTTPException(status_code=404, detail="user not found")
+    if get_user_group(db, user_id):
+        raise HTTPException(status_code=400, detail="user already has a group")
+    group = db.query(Group).filter(Group.invite_code == invite_code).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="invalid invite code")
+    db.add(UserGroup(user_id=user_id, group_id=group.id))
+    db.commit()
+    return serialize_group(db, group, user_id)
+
+
+@router.delete("/api/users/{user_id}/group")
+async def leave_debug_group(user_id: int, db: Session = Depends(get_db)):
+    membership = db.query(UserGroup).filter(UserGroup.user_id == user_id).first()
+    if not membership:
+        return {"ok": True, "message": "user has no group"}
+    group = db.query(Group).filter(Group.id == membership.group_id).first()
+    db.delete(membership)
+    if group and group.creator_id == user_id:
+        remaining = (
+            db.query(UserGroup)
+            .filter(UserGroup.group_id == group.id, UserGroup.user_id != user_id)
+            .count()
+        )
+        if remaining == 0:
+            db.delete(group)
+    db.commit()
+    return {"ok": True}
+
+
+def debug_group_members(group_id: int, db: Session) -> list[dict[str, Any]]:
+    rows = (
+        db.query(UserGroup, User)
+        .join(User, User.id == UserGroup.user_id)
+        .filter(UserGroup.group_id == group_id)
+        .order_by(UserGroup.joined_at.asc())
+        .all()
+    )
+    group = db.query(Group).filter(Group.id == group_id).first()
+    return [
+        {
+            "user_id": user.id,
+            "nickname": user.nickname or "用户",
+            "email": user.email or "",
+            "openid": user.openid or "",
+            "role": "owner" if group and group.creator_id == user.id else "member",
+            "joined_at": membership.joined_at.isoformat() if membership.joined_at else "",
+        }
+        for membership, user in rows
+    ]
+
+
+@router.get("/api/groups/{group_id}/members")
+async def list_debug_group_members(group_id: int, db: Session = Depends(get_db)):
+    return debug_group_members(group_id, db)
+
+
+@router.delete("/api/groups/{group_id}/members/{user_id}")
+async def remove_debug_group_member(group_id: int, user_id: int, db: Session = Depends(get_db)):
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="group not found")
+    if group.creator_id == user_id:
+        raise HTTPException(status_code=400, detail="cannot remove group owner")
+    membership = (
+        db.query(UserGroup)
+        .filter(UserGroup.group_id == group_id, UserGroup.user_id == user_id)
+        .first()
+    )
+    if membership:
+        db.delete(membership)
+        db.commit()
+    return {"ok": True}
 
 
 @router.get("/api/tasks")
@@ -292,6 +453,9 @@ DEBUG_TASKS_HTML = """
     .muted { color: #777; font-size: 12px; }
     .ok { color: #0a7; }
     .bad { color: #b22; }
+    .section-title { font-weight: 700; margin-bottom: 8px; }
+    .group-box { background: #fafafa; border: 1px solid #e5e5e5; padding: 10px; margin-top: 8px; }
+    .member-chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid #ddd; padding: 4px 6px; margin: 3px; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -299,8 +463,9 @@ DEBUG_TASKS_HTML = """
   <div class="muted">选择小程序当前登录的用户，再增删改任务。小程序日历刷新后会读取同一批数据。</div>
 
   <div class="panel">
+    <div class="section-title">用户</div>
     <div class="row">
-      <select id="userSelect"></select>
+      <select id="userSelect" onchange="onUserChange()"></select>
       <button onclick="loadUsers()">刷新用户</button>
       <input id="newUserName" placeholder="新测试用户昵称" />
       <button onclick="createUser()">创建测试用户</button>
@@ -317,6 +482,20 @@ DEBUG_TASKS_HTML = """
   </div>
 
   <div class="panel">
+    <div class="section-title">小组调试</div>
+    <div id="groupStatus" class="group-box muted">未加载</div>
+    <div class="row">
+      <input id="newGroupName" placeholder="新小组名称" value="Debug 小组" />
+      <button onclick="createGroup()">用当前用户创建小组</button>
+      <input id="joinInviteCode" placeholder="邀请码" />
+      <button onclick="joinGroup()">当前用户加入</button>
+      <button onclick="leaveGroup()">当前用户退出小组</button>
+    </div>
+    <div id="groupMembers"></div>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">任务调试</div>
     <div class="row">
       <input id="taskName" placeholder="任务名" value="背单词" />
       <input id="taskSubject" placeholder="科目" value="英语" />
@@ -373,7 +552,12 @@ DEBUG_TASKS_HTML = """
         const label = `#${u.id} ${u.nickname || '(no nickname)'} ${u.email || u.openid || ''}`
         return `<option value="${u.id}">${label}</option>`
       }).join('')
-      if (users.length) loadTasks()
+      if (users.length) onUserChange()
+    }
+
+    function onUserChange() {
+      loadTasks()
+      loadUserGroup()
     }
 
     async function createUser() {
@@ -383,6 +567,64 @@ DEBUG_TASKS_HTML = """
       })
       await loadUsers()
       show('已创建测试用户')
+    }
+
+    async function loadUserGroup() {
+      if (!selectedUserId()) return
+      const res = await api(`/debug/api/users/${selectedUserId()}/group`)
+      const group = res.group
+      if (!group) {
+        $('groupStatus').className = 'group-box muted'
+        $('groupStatus').innerHTML = '当前用户未加入小组'
+        $('groupMembers').innerHTML = ''
+        return
+      }
+      $('groupStatus').className = 'group-box'
+      $('groupStatus').innerHTML = `
+        <div><b>#${group.id} ${escapeHtml(group.name)}</b></div>
+        <div>角色：${group.role_for_selected_user === 'owner' ? '组长' : '成员'} · 成员 ${group.member_count} 人 · 邀请码 <b>${group.invite_code}</b></div>
+      `
+      $('joinInviteCode').value = group.invite_code
+      renderGroupMembers(group.id, res.members || [])
+    }
+
+    function renderGroupMembers(groupId, members) {
+      $('groupMembers').innerHTML = members.map(m => `
+        <span class="member-chip">
+          #${m.user_id} ${escapeHtml(m.nickname)} ${m.role === 'owner' ? '组长' : '成员'}
+          ${m.role === 'owner' ? '' : `<button onclick="removeGroupMember(${groupId}, ${m.user_id})">移除</button>`}
+        </span>
+      `).join('')
+    }
+
+    async function createGroup() {
+      await api('/debug/api/groups', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: selectedUserId(), name: $('newGroupName').value || 'Debug 小组' })
+      })
+      await loadUserGroup()
+      show('已创建小组')
+    }
+
+    async function joinGroup() {
+      await api('/debug/api/groups/join', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: selectedUserId(), invite_code: $('joinInviteCode').value })
+      })
+      await loadUserGroup()
+      show('已加入小组')
+    }
+
+    async function leaveGroup() {
+      await api(`/debug/api/users/${selectedUserId()}/group`, { method: 'DELETE' })
+      await loadUserGroup()
+      show('当前用户已退出小组')
+    }
+
+    async function removeGroupMember(groupId, userId) {
+      await api(`/debug/api/groups/${groupId}/members/${userId}`, { method: 'DELETE' })
+      await loadUserGroup()
+      show('已移除小组成员')
     }
 
     async function loadTasks() {

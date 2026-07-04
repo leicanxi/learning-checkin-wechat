@@ -67,8 +67,9 @@
       <view class="section-title" style="margin:4px 0;font-size:20px">{{groupName}}</view>
       <text class="text-muted">{{groupInfo}}</text>
       <view class="group-actions mt14">
-        <view class="secondary flex-1" bindtap="joinGroup">加入小组</view>
-        <view class="dark flex-1" bindtap="manageGroup">管理小组</view>
+        <view class="secondary flex-1" bindtap="openMyGroup">我的小组</view>
+        <view wx:if="{{groupRole === 'owner'}}" class="dark flex-1" bindtap="manageGroup">管理小组</view>
+        <view wx:else class="dark flex-1" bindtap="leaveGroup">退出小组</view>
       </view>
     </block>
     <block wx:else>
@@ -77,7 +78,7 @@
       </view>
       <view class="group-actions mt14">
         <view class="secondary flex-1" bindtap="joinGroup">加入小组</view>
-        <view class="dark flex-1" bindtap="manageGroup">管理小组</view>
+        <view class="dark flex-1" bindtap="createGroup">创建小组</view>
       </view>
     </block>
   </view>
@@ -112,3 +113,36 @@
 
   <view style="height:40px"></view>
 </scroll-view>
+
+<!-- 小组详情 / 管理弹层 -->
+<view wx:if="{{groupSheetShow}}" class="sheet-overlay" bindtap="closeGroupSheet" catchtouchmove="preventTouchMove">
+  <view class="sheet-panel" catchtap="preventTouchMove">
+    <view class="grabber"></view>
+    <view class="sheet-title">{{groupSheetTitle}}</view>
+    <view class="sheet-desc">{{groupName}}</view>
+
+    <view class="group-summary-line">{{groupInfo}}</view>
+
+    <view wx:if="{{groupSheetMode === 'manage' && groupInviteCode}}" class="invite-box">
+      <text class="invite-label">邀请码</text>
+      <text class="invite-code">{{groupInviteCode}}</text>
+    </view>
+
+    <view class="member-list">
+      <view wx:for="{{groupMembers}}" wx:key="user_id" class="member-row">
+        <view class="flex-1">
+          <text class="member-name">{{item.nickname}} {{item.role === 'owner' ? '· 组长' : ''}}</text>
+          <text class="member-meta">本周 {{item.weekly_completion_rate}}% · {{item.rank_range_label}}</text>
+        </view>
+        <view
+          wx:if="{{groupSheetMode === 'manage' && item.role !== 'owner'}}"
+          class="tag"
+          data-id="{{item.user_id}}"
+          bindtap="removeMember"
+        >移除</view>
+      </view>
+    </view>
+
+    <view class="primary" bindtap="closeGroupSheet" style="width:100%;margin-top:14px">知道了</view>
+  </view>
+</view>

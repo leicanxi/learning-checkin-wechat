@@ -141,3 +141,61 @@
   flex: 1;
   text-align: center;
 }
+
+.group-summary-line {
+  color: var(--olive);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 8px 0 12px;
+}
+
+.invite-box {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--sand-soft);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.invite-label {
+  color: var(--stone);
+  font-size: 12px;
+  display: block;
+}
+
+.invite-code {
+  color: var(--black);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  margin-top: 4px;
+  display: block;
+}
+
+.member-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.member-row {
+  min-height: 54px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cream);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-name {
+  color: var(--black);
+  font-weight: 600;
+  font-size: 14px;
+  display: block;
+}
+
+.member-meta {
+  color: var(--stone);
+  font-size: 12px;
+  margin-top: 3px;
+  display: block;
+}

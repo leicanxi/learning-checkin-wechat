@@ -14,6 +14,7 @@
       <view class="month-title">{{monthTitle}}</view>
       <view class="flex-row gap-10">
         <text class="tag clay">完成率 {{completionRate}}%</text>
+        <view class="calendar-mode-btn" bindtap="toggleCalendarMode">{{calendarModeText}}</view>
         <view class="month-nav">
           <view class="nav-btn" bindtap="prevMonth">‹</view>
           <view class="nav-btn" bindtap="nextMonth">›</view>
