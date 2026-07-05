@@ -9,6 +9,7 @@ from auth import get_current_user
 from database import get_db
 from models import Checkin, Task, User
 from schemas import CheckinBackfill, CheckinCreate, CheckinOut, CheckinUpdate
+from time_utils import local_now_naive, local_today
 
 router = APIRouter(prefix="/checkins", tags=["打卡记录"])
 
@@ -79,7 +80,7 @@ async def create_checkin(
         db,
         user,
         task,
-        req.checkin_time or datetime.utcnow(),
+        req.checkin_time or local_now_naive(),
         checkin_date=task.start_date,
     )
     return CheckinOut.model_validate(checkin)
@@ -92,7 +93,7 @@ async def backfill_checkin(
     db: Session = Depends(get_db),
 ):
     """Backfill one check-in within the latest 7 days."""
-    today = date.today()
+    today = local_today()
     min_date = today - timedelta(days=7)
     if req.checkin_date < min_date:
         raise HTTPException(status_code=400, detail="补打卡不可超过7天")

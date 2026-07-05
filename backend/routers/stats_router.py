@@ -10,6 +10,7 @@ from auth import get_current_user
 from database import get_db
 from models import Checkin, Task, User
 from schemas import CheckinTrend, StatsResponse, SubjectDistribution
+from time_utils import local_today
 
 router = APIRouter(prefix="/stats", tags=["统计服务"])
 
@@ -26,7 +27,7 @@ def calculate_streak(user_id: int, db: Session) -> tuple[int, int]:
     if not dates:
         return 0, 0
 
-    today = date.today()
+    today = local_today()
     current = 0
     cursor = today
     date_set = set(dates)
@@ -47,7 +48,7 @@ def calculate_streak(user_id: int, db: Session) -> tuple[int, int]:
 
 
 def calculate_completion_rate(user_id: int, days: int, db: Session) -> float:
-    today = date.today()
+    today = local_today()
     start = today - timedelta(days=days - 1)
 
     tasks = (
@@ -115,8 +116,9 @@ async def get_stats(
     days_lookup = {"week": 7, "month": 30, "year": 365}
     trend_days = days_lookup.get(period, 7)
     try:
-        trend_start = datetime.strptime(start, "%Y-%m-%d").date() if start else date.today() - timedelta(days=trend_days - 1)
-        trend_end = datetime.strptime(end, "%Y-%m-%d").date() if end else date.today()
+        today = local_today()
+        trend_start = datetime.strptime(start, "%Y-%m-%d").date() if start else today - timedelta(days=trend_days - 1)
+        trend_end = datetime.strptime(end, "%Y-%m-%d").date() if end else today
     except ValueError:
         raise HTTPException(status_code=400, detail="start/end 格式错误，应为 YYYY-MM-DD")
 
@@ -139,7 +141,7 @@ async def get_stats(
 
     active_tasks = (
         db.query(func.count(Task.id))
-        .filter(Task.user_id == user.id, Task.status != "deleted", Task.start_date >= date.today())
+        .filter(Task.user_id == user.id, Task.status != "deleted", Task.start_date >= local_today())
         .scalar()
     ) or 0
 

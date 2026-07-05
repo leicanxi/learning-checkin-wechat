@@ -20,6 +20,7 @@ from schemas import (
 )
 from auth import get_current_user
 from config import settings
+from time_utils import local_now_naive, local_today
 
 router = APIRouter(prefix="/ai", tags=["AI 服务"])
 
@@ -33,7 +34,7 @@ def check_ai_rate_limit(user: User, db: Session) -> None:
     if AI_DAILY_LIMIT <= 0:
         return
 
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = local_now_naive().replace(hour=0, minute=0, second=0, microsecond=0)
     today_calls = (
         db.query(func.count(Task.id))
         .filter(
@@ -233,7 +234,7 @@ async def generate_plan(
 
     # 2. 组装 Prompt：只告诉 AI 今天日期和模式提示，其余全部由 AI 自己理解
     mode_prompt = MODE_PROMPTS[mode]
-    today_str = date.today().strftime('%Y-%m-%d')
+    today_str = local_today().strftime('%Y-%m-%d')
     user_prompt = f"""
 {mode_prompt}
 
@@ -247,7 +248,7 @@ async def generate_plan(
     ai_result = await call_deepseek(user_prompt)
 
     # 4. 校验日期范围：今天 ~ 未来365天
-    today = date.today()
+    today = local_today()
     max_date = today + timedelta(days=365)
     valid_tasks = []
 

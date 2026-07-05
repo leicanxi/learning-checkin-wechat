@@ -18,6 +18,7 @@ Page({
     sheetShow: false,
     sheetTitle: '',
     sheetText: '',
+    sheetTasks: [],
     // 图例
     legends: [
       { dotClass: 'done-dot', text: '已打卡' },
@@ -108,8 +109,11 @@ Page({
         case 'pending':
           cls += ds === todayStr ? ' today' : ' pending'; status = ds === todayStr ? '今日' : '待完成'; break
         case 'empty':
+          cls += ' empty';
           status = ''; break
       }
+    } else {
+      cls += ' empty'
     }
 
     return { day, muted: false, cls, status, date: ds }
@@ -173,19 +177,33 @@ Page({
     const checkinCount = dayData.checkin_count || 0
 
     let text = ''
+    let sheetTasks = []
+    const toSheetTask = (task, completed = false) => {
+      if (typeof task === 'string') {
+        return { name: task, meta: '', completed }
+      }
+      const metaParts = []
+      if (task.suggested_duration) metaParts.push(`${task.suggested_duration} 分钟`)
+      if (task.subject) metaParts.push(task.subject)
+      return {
+        name: task.name,
+        meta: metaParts.join(' · '),
+        completed: completed || !!task.completed
+      }
+    }
+
     if (date === todayStr) {
       const todayData = this.data.todayData
       if (todayData && todayData.tasks && todayData.tasks.length > 0) {
-        const items = todayData.tasks.map(t => `- ${t.name}（${t.suggested_duration || '30'} 分钟）`)
-        text = '今日任务：\n' + items.join('\n')
+        sheetTasks = todayData.tasks.map(t => toSheetTask(t))
       } else if (preview.length > 0) {
-        text = '今日安排：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.name}`).join('\n')
+        sheetTasks = preview.map(t => toSheetTask(t))
       } else {
-        text = '今天安排了学习任务，暂未加载详情。'
+        text = '今天暂无任务安排。'
       }
     } else if (date > todayStr) {
       if (preview.length > 0) {
-        text = '安排任务：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.name}`).join('\n')
+        sheetTasks = preview.map(t => toSheetTask(t))
       } else if (checkinCount > 0) {
         text = `已安排 ${checkinCount} 项学习任务。`
       } else {
@@ -193,8 +211,9 @@ Page({
       }
     } else if (status === '已打卡') {
       text = preview.length > 0
-        ? '已完成：\n' + preview.map(t => `- ${typeof t === 'string' ? t : t.name}`).join('\n')
+        ? ''
         : '当天已完成学习打卡，学习记录已计入统计。'
+      sheetTasks = preview.map(t => toSheetTask(t, true))
     } else if (status === '待完成') {
       text = '暂无安排，可在规划页添加任务。'
     } else {
@@ -205,12 +224,13 @@ Page({
       selectedDate: date,
       sheetShow: true,
       sheetTitle: displayDate,
-      sheetText: text
+      sheetText: text,
+      sheetTasks
     })
   },
 
   closeSheet() {
-    this.setData({ sheetShow: false })
+    this.setData({ sheetShow: false, sheetTasks: [] })
   },
 
   prevMonth() {

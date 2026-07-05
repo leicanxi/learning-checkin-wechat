@@ -84,6 +84,12 @@
   opacity: 0.35;
 }
 
+.date-btn.empty {
+  background: rgba(250,249,245,.35);
+  border-color: rgba(232,230,220,.72);
+  color: var(--silver);
+}
+
 .date-btn.done {
   background: var(--clay-soft);
   border-color: rgba(201,100,66,.28);
@@ -127,9 +133,60 @@
 }
 
 .date-btn.pending {
-  background: rgba(250,249,245,.35);
-  color: var(--stone);
-  border-style: dotted;
+  background: rgba(250,249,245,.72);
+  color: var(--charcoal);
+  border-style: solid;
+}
+
+/* 底部任务列表 */
+.calendar-sheet-list {
+  margin: 14px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calendar-sheet-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--sand-soft);
+  border: 1px solid var(--border);
+}
+
+.sheet-task-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--stone);
+  flex-shrink: 0;
+}
+
+.sheet-task-dot.done {
+  background: var(--terracotta);
+}
+
+.sheet-task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet-task-name {
+  display: block;
+  color: var(--charcoal);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sheet-task-meta {
+  display: block;
+  color: var(--olive);
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 3px;
 }
 
 /* 图例 */

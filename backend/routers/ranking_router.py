@@ -1,7 +1,7 @@
 """
 排行与徽章路由
 """
-from datetime import date, timedelta
+from datetime import timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -12,20 +12,22 @@ from schemas import RankingMeResponse, BadgeOut
 from typing import List
 from pydantic import BaseModel
 from auth import get_current_user
+from time_utils import local_today
 
 router = APIRouter(tags=["排行与徽章"])
 
 
 def calculate_regularity_score(user_id: int, db: Session) -> float:
     """Calculate a simple MVP score from flat task completion in the last 30 days."""
-    start = date.today() - timedelta(days=29)
+    today = local_today()
+    start = today - timedelta(days=29)
     tasks = (
         db.query(Task)
         .filter(
             Task.user_id == user_id,
             Task.status != "deleted",
             Task.start_date >= start,
-            Task.start_date <= date.today(),
+            Task.start_date <= today,
         )
         .all()
     )

@@ -91,7 +91,17 @@
   <view class="sheet-panel" catchtap="preventTouchMove">
     <view class="grabber"></view>
     <view class="sheet-title">{{sheetTitle}}</view>
-    <view class="sheet-desc">{{sheetText}}</view>
+    <view wx:if="{{sheetTasks.length > 0}}" class="calendar-sheet-list">
+      <view wx:for="{{sheetTasks}}" wx:key="index" class="calendar-sheet-task">
+        <view class="sheet-task-dot {{item.completed ? 'done' : ''}}"></view>
+        <view class="sheet-task-body">
+          <text class="sheet-task-name">{{item.name}}</text>
+          <text wx:if="{{item.meta}}" class="sheet-task-meta">{{item.meta}}</text>
+        </view>
+        <text wx:if="{{item.completed}}" class="tag sage">已完成</text>
+      </view>
+    </view>
+    <view wx:else class="sheet-desc">{{sheetText}}</view>
     <view class="primary" bindtap="closeSheet" style="width:100%">知道了</view>
   </view>
 </view>

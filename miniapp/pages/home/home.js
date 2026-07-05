@@ -69,7 +69,8 @@ Page({
 
   async toggleTask(e) {
     const { id, completed, checkinId } = e.currentTarget.dataset
-    if (completed) {
+    const isCompleted = completed === true || completed === 'true'
+    if (isCompleted) {
       try {
         if (checkinId) {
           await del(`/checkins/${checkinId}`)
@@ -86,7 +87,7 @@ Page({
         this.showToast('打卡失败')
       }
     }
-    this.loadAll()
+    await this.loadAll()
   },
 
   showToast(text) {

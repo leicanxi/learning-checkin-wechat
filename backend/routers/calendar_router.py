@@ -18,6 +18,7 @@ from schemas import (
     TodayTaskItem,
     TomorrowRecommendedTask,
 )
+from time_utils import local_today
 
 router = APIRouter(prefix="/calendar", tags=["日历服务"])
 
@@ -65,7 +66,7 @@ async def get_month_calendar(
 ):
     """Return calendar data for one month."""
     month_start, month_end = month_bounds(year, month)
-    today = date.today()
+    today = local_today()
 
     tasks = (
         db.query(Task)
@@ -136,7 +137,7 @@ async def get_today_tasks(
     db: Session = Depends(get_db),
 ):
     """Return today's task instances."""
-    today = date.today()
+    today = local_today()
     tasks = (
         db.query(Task)
         .filter(
@@ -179,7 +180,7 @@ async def get_tomorrow_tasks(
     db: Session = Depends(get_db),
 ):
     """Return tomorrow's scheduled task instances."""
-    tomorrow = date.today() + timedelta(days=1)
+    tomorrow = local_today() + timedelta(days=1)
     tasks = (
         db.query(Task)
         .filter(
