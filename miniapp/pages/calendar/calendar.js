@@ -1,4 +1,5 @@
 const { get } = require('../../utils/api')
+const { getNavMetrics } = require('../../utils/nav')
 const weekDays = ['日', '一', '二', '三', '四', '五', '六']
 
 Page({
@@ -30,6 +31,7 @@ Page({
     const d = new Date()
     const todayStr = this.formatDate(d)
     this.setData({
+      ...getNavMetrics(),
       year: d.getFullYear(),
       month: d.getMonth() + 1,
       selectedDate: todayStr,

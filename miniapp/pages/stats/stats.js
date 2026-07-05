@@ -1,4 +1,5 @@
 const { get } = require('../../utils/api')
+const { getNavMetrics } = require('../../utils/nav')
 
 Page({
   data: {
@@ -28,6 +29,7 @@ Page({
   },
 
   onShow() {
+    this.setData(getNavMetrics())
     this.loadAll()
   },
 

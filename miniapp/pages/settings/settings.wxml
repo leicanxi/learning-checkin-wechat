@@ -1,6 +1,8 @@
 <!-- 设置页 - 偏好与配置 -->
-<view class="nav-bar">
-  <text class="nav-title">设置</text>
+<view class="nav-bar" style="{{navBarStyle}}">
+  <view class="nav-content" style="{{navContentStyle}}">
+    <text class="nav-title">设置</text>
+  </view>
 </view>
 
 <scroll-view scroll-y class="screen">

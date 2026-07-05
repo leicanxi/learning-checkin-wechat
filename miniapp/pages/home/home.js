@@ -1,4 +1,5 @@
 const { get, post, del } = require('../../utils/api')
+const { getNavMetrics } = require('../../utils/nav')
 
 const weekDayLabels = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -21,7 +22,7 @@ Page({
   },
 
   onShow() {
-    this.setData({ todayLabel: this.getTodayLabel() })
+    this.setData({ ...getNavMetrics(), todayLabel: this.getTodayLabel() })
     this.loadAll()
   },
 

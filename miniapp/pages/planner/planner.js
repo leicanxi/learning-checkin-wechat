@@ -1,4 +1,5 @@
 const { post, uploadFile } = require('../../utils/api')
+const { getNavMetrics } = require('../../utils/nav')
 
 // 录音管理器（单例）
 const recorderManager = wx.getRecorderManager()
@@ -26,6 +27,7 @@ Page({
   },
 
   onLoad() {
+    this.setData(getNavMetrics())
     this._setupRecorder()
   },
 

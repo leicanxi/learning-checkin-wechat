@@ -1,5 +1,6 @@
 const { get, put, post, del } = require('../../utils/api')
 const auth = require('../../utils/auth')
+const { getNavMetrics } = require('../../utils/nav')
 
 // 订阅消息模板 ID（在微信公众平台后台 -> 订阅消息 -> 选用模板后，把模板ID填到这里）
 const SUBSCRIBE_TMPL_IDS = {
@@ -30,6 +31,7 @@ Page({
   },
 
   onShow() {
+    this.setData(getNavMetrics())
     this.checkLoginState()
     if (this.data.isLogin) {
       this.loadReminderSettings()

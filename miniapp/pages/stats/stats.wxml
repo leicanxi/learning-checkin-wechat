@@ -1,6 +1,8 @@
 <!-- 统计页 - 数据与排行 -->
-<view class="nav-bar">
-  <text class="nav-title">学习统计</text>
+<view class="nav-bar" style="{{navBarStyle}}">
+  <view class="nav-content" style="{{navContentStyle}}">
+    <text class="nav-title">学习统计</text>
+  </view>
 </view>
 
 <scroll-view scroll-y class="screen">

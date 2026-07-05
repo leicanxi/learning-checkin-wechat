@@ -48,8 +48,8 @@ page {
 
 /* --- 自定义导航栏 --- */
 .nav-bar {
-  height: 46px;
-  padding: 0 14px;
+  height: 70px;
+  padding: 24px 14px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,6 +59,14 @@ page {
   z-index: 100;
   background: rgba(245,244,237,.94);
   backdrop-filter: blur(18px);
+}
+
+.nav-content {
+  width: 100%;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-title {
