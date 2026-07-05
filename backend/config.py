@@ -22,6 +22,10 @@ class Settings:
     WECHAT_APPID: str = os.getenv("WECHAT_APPID", "wx_test_appid")
     WECHAT_APPSECRET: str = os.getenv("WECHAT_APPSECRET", "test_appsecret")
 
+    # 微信订阅消息模板 ID（需要在微信公众平台后台 -> 订阅消息 -> 选用模板后获取）
+    WECHAT_TMPL_DAILY_CHECKIN: str = os.getenv("WECHAT_TMPL_DAILY_CHECKIN", "")
+    WECHAT_TMPL_TASK_DEADLINE: str = os.getenv("WECHAT_TMPL_TASK_DEADLINE", "")
+
     # DeepSeek AI
     DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "sk-test-key")
     DEEPSEEK_API_BASE: str = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")

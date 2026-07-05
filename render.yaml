@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: wechat-learning-checkin
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./learning_tracker.db
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: WECHAT_APPID
+        sync: false
+      - key: WECHAT_APPSECRET
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_BASE
+        value: https://api.deepseek.com/v1
+      - key: TENCENT_SECRET_ID
+        sync: false
+      - key: TENCENT_SECRET_KEY
+        sync: false
+      - key: UPLOAD_DIR
+        value: ./uploads

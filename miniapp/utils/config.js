@@ -3,7 +3,7 @@ const API_BASES = {
   remote: 'http://120.77.254.150:8001'
 }
 
-const CURRENT_ENV = 'local'
+const CURRENT_ENV = 'remote'
 
 function getBaseURL() {
   return API_BASES[CURRENT_ENV] || API_BASES.local

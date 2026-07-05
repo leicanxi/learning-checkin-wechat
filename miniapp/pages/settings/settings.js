@@ -1,6 +1,14 @@
 const { get, put, post, del } = require('../../utils/api')
 const auth = require('../../utils/auth')
 
+// 订阅消息模板 ID（在微信公众平台后台 -> 订阅消息 -> 选用模板后，把模板ID填到这里）
+const SUBSCRIBE_TMPL_IDS = {
+  // 每日打卡提醒模板ID
+  dailyCheckin: '',
+  // 任务到期通知模板ID
+  taskDeadline: ''
+}
+
 Page({
   data: {
     isLogin: false,
@@ -116,9 +124,9 @@ Page({
     try {
       const res = await get('/settings/reminder')
       const enabled = !!res.reminder_enabled
-      const timeStr = enabled && res.reminder_time
-        ? (typeof res.reminder_time === 'string' ? res.reminder_time.slice(0, 5) : '21:00')
-        : '--'
+      const timeStr = (res.reminder_time && typeof res.reminder_time === 'string')
+        ? res.reminder_time.slice(0, 5)
+        : '21:10'
       this.setData({
         dailyCheckin: enabled,
         taskDeadline: !!res.task_expire_notify,
@@ -185,11 +193,78 @@ Page({
   },
 
   toggleDailyCheckin() {
-    this.setData({ dailyCheckin: !this.data.dailyCheckin })
+    const newVal = !this.data.dailyCheckin
+    // 打开开关时，请求订阅授权
+    if (newVal && SUBSCRIBE_TMPL_IDS.dailyCheckin) {
+      wx.requestSubscribeMessage({
+        tmplIds: [SUBSCRIBE_TMPL_IDS.dailyCheckin],
+        success: (res) => {
+          const accepted = res[SUBSCRIBE_TMPL_IDS.dailyCheckin] === 'accept'
+          if (accepted) {
+            this.setData({ dailyCheckin: true })
+            this.saveReminderSetting(true, this.data.taskDeadline)
+            wx.showToast({ title: '已开启打卡提醒', icon: 'success', duration: 1500 })
+          } else {
+            wx.showToast({ title: '需要授权才能发送通知', icon: 'none', duration: 2000 })
+          }
+        },
+        fail: () => {
+          wx.showToast({ title: '订阅授权失败，请稍后重试', icon: 'none', duration: 2000 })
+        }
+      })
+    } else if (newVal && !SUBSCRIBE_TMPL_IDS.dailyCheckin) {
+      // 未配置模板ID，只保存状态
+      this.setData({ dailyCheckin: true })
+      this.saveReminderSetting(true, this.data.taskDeadline)
+      wx.showToast({ title: '已开启（需配置订阅消息模板ID）', icon: 'none', duration: 2000 })
+    } else {
+      // 关闭开关
+      this.setData({ dailyCheckin: false })
+      this.saveReminderSetting(false, this.data.taskDeadline)
+    }
   },
 
   toggleTaskDeadline() {
-    this.setData({ taskDeadline: !this.data.taskDeadline })
+    const newVal = !this.data.taskDeadline
+    // 打开开关时，请求订阅授权
+    if (newVal && SUBSCRIBE_TMPL_IDS.taskDeadline) {
+      wx.requestSubscribeMessage({
+        tmplIds: [SUBSCRIBE_TMPL_IDS.taskDeadline],
+        success: (res) => {
+          const accepted = res[SUBSCRIBE_TMPL_IDS.taskDeadline] === 'accept'
+          if (accepted) {
+            this.setData({ taskDeadline: true })
+            this.saveReminderSetting(this.data.dailyCheckin, true)
+            wx.showToast({ title: '已开启到期通知', icon: 'success', duration: 1500 })
+          } else {
+            wx.showToast({ title: '需要授权才能发送通知', icon: 'none', duration: 2000 })
+          }
+        },
+        fail: () => {
+          wx.showToast({ title: '订阅授权失败，请稍后重试', icon: 'none', duration: 2000 })
+        }
+      })
+    } else if (newVal && !SUBSCRIBE_TMPL_IDS.taskDeadline) {
+      this.setData({ taskDeadline: true })
+      this.saveReminderSetting(this.data.dailyCheckin, true)
+      wx.showToast({ title: '已开启（需配置订阅消息模板ID）', icon: 'none', duration: 2000 })
+    } else {
+      this.setData({ taskDeadline: false })
+      this.saveReminderSetting(this.data.dailyCheckin, false)
+    }
+  },
+
+  // 保存提醒设置到后端
+  async saveReminderSetting(dailyCheckin, taskDeadline) {
+    try {
+      await put('/settings/reminder', {
+        reminder_enabled: dailyCheckin,
+        reminder_time: this.data.reminderTime,
+        task_expire_notify: taskDeadline
+      })
+    } catch (e) {
+      console.error('保存提醒设置失败:', e)
+    }
   },
 
   joinGroup() {

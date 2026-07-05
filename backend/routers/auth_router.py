@@ -36,11 +36,13 @@ async def wechat_login(req: WechatLoginRequest, db: Session = Depends(get_db)):
         "js_code": req.code,
         "grant_type": "authorization_code",
     }
+    print(f"[wechat-login] appid={settings.WECHAT_APPID}, code={req.code[:10]}...")
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(wechat_url, params=params)
         data = resp.json()
 
+    print(f"[wechat-login] wechat response: {data}")
     openid = data.get("openid")
     if not openid:
         error_msg = data.get("errmsg", "微信登录失败")
