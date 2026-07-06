@@ -27,7 +27,12 @@ function request(method, path, data) {
         }
       },
       fail(err) {
-        wx.showToast({ title: '网络错误', icon: 'none', duration: 1500 })
+        console.error('[uploadFile] failed:', path, err)
+        const errMsg = err && err.errMsg ? err.errMsg : ''
+        const title = errMsg.includes('domain') || errMsg.includes('合法域名')
+          ? '上传域名未配置'
+          : (errMsg.includes('timeout') ? '上传超时' : '网络错误')
+        wx.showToast({ title, icon: 'none', duration: 1500 })
         reject(err)
       }
     })

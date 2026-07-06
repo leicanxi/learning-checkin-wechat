@@ -8,7 +8,7 @@
 <scroll-view scroll-y class="screen">
   <view class="page-kicker">数据与排行</view>
   <view class="page-title">看见进步，也看见位置。</view>
-  <view class="page-subtitle">统计页合并排行榜：先看学习趋势，再查看小组与全局排名。</view>
+  <view class="page-subtitle">先看学习趋势，再查看小组与全局排名。</view>
 
   <!-- 周/月/年切换 -->
   <view class="segmented">
@@ -22,11 +22,20 @@
       <text class="tag quiet">{{trendTag}}</text>
     </view>
     <canvas
+      wx:if="{{trendChartMode === 'line'}}"
       type="2d"
       id="trendCanvas"
       class="chart-canvas"
       style="width:100%;height:160px"
+      bindtap="toggleTrendChart"
     ></canvas>
+    <view wx:else class="bar-fallback" bindtap="toggleTrendChart">
+      <view wx:for="{{trendData}}" wx:key="idx" class="bar-col">
+        <text class="bar-val">{{item.count}}</text>
+        <view class="bar" style="height:{{item.barHeight}}px"></view>
+        <text class="bar-label">{{item.label}}</text>
+      </view>
+    </view>
   </view>
 
   <!-- 完成率概览 -->

@@ -7,6 +7,7 @@ Page({
     activePeriod: '周',
     trendTitle: '近 7 天趋势',
     trendTag: '完成 -- 次',
+    trendChartMode: 'line',
     trendData: [],
     masteryData: [],
     completedCount: '--',
@@ -44,13 +45,7 @@ Page({
 
       // 趋势数据 —— 后端字段 checkin_trend
       const trend = (stats && stats.checkin_trend) ? stats.checkin_trend : []
-      const trendData = trend.slice(-7).map(item => {
-        const parts = item.date.split('-')
-        return {
-          label: parts.length >= 3 ? `${parts[1]}/${parts[2]}` : item.date,
-          count: item.count
-        }
-      })
+      const trendData = this.withBarHeights(this.buildRecentTrendData(trend))
 
       // MVP 已砍掉复习/掌握系统，不展示 knowledge_progress 的占位数据。
       // 这里复用环形样式展示真实完成率。
@@ -82,7 +77,7 @@ Page({
 
       this.setData({
         trendData,
-        trendTag: `完成 ${trend.reduce((s, d) => s + d.count, 0)} 次`,
+        trendTag: `完成 ${trendData.reduce((s, d) => s + d.count, 0)} 次`,
         masteryData,
         completedCount: stats ? `${stats.total_checkins || 0} 次` : '--',
         completionCopy: this.getCompletionCopy(stats),
@@ -95,12 +90,11 @@ Page({
         rankHonor: ranking ? (ranking.rank_title || '加载中...') : '加载中...',
         allBadges: earnedBadges,
         displayBadges: earnedBadges.slice(0, 3)
+      }, () => {
+        if (this.data.trendChartMode === 'line' && trendData.length > 0) {
+          this.drawTrendChart(trendData)
+        }
       })
-
-      // 绘制折线图
-      if (trendData.length > 0) {
-        this.drawTrendChart(trendData)
-      }
     } catch (e) {
       // 模拟数据
       this.setMockData()
@@ -112,6 +106,27 @@ Page({
     return map[this.data.activePeriod] || 'week'
   },
 
+  buildRecentTrendData(trend) {
+    const countByDate = {}
+    ;(trend || []).forEach(item => {
+      countByDate[item.date] = item.count || 0
+    })
+
+    const result = []
+    const today = new Date()
+    for (let offset = 6; offset >= 0; offset--) {
+      const d = new Date(today)
+      d.setDate(today.getDate() - offset)
+      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      result.push({
+        date,
+        label: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
+        count: countByDate[date] || 0
+      })
+    }
+    return result
+  },
+
   getCompletionCopy(stats) {
     if (!stats) return '暂无数据'
     const total = stats.total_checkins || 0
@@ -121,7 +136,7 @@ Page({
   },
 
   setMockData() {
-    const trendData = [
+    const trendData = this.withBarHeights([
       { label: '五', count: 3 },
       { label: '六', count: 2 },
       { label: '日', count: 4 },
@@ -129,7 +144,7 @@ Page({
       { label: '二', count: 3 },
       { label: '三', count: 6 },
       { label: '四', count: 4 }
-    ]
+    ])
     this.setData({
       trendData,
       trendTag: '完成 18 次',
@@ -148,15 +163,28 @@ Page({
       rankHonor: '你已获得「规律达人」称号，最近 7 天有 5 天按计划完成。',
       allBadges: [],
       displayBadges: []
+    }, () => {
+      if (this.data.trendChartMode === 'line') {
+        this.drawTrendChart(trendData)
+      }
     })
-    if (trendData.length > 0) {
-      this.drawTrendChart(trendData)
-    }
   },
 
-  getBarHeight(count) {
-    const max = Math.max(...this.data.trendData.map(d => d.count), 1)
-    return Math.max(8, (count / max) * 80)
+  withBarHeights(data) {
+    const max = Math.max(...data.map(d => d.count), 1)
+    return data.map(item => ({
+      ...item,
+      barHeight: Math.max(8, Math.round((item.count / max) * 104))
+    }))
+  },
+
+  toggleTrendChart() {
+    const nextMode = this.data.trendChartMode === 'line' ? 'bar' : 'line'
+    this.setData({ trendChartMode: nextMode }, () => {
+      if (nextMode === 'line' && this.data.trendData.length > 0) {
+        this.drawTrendChart(this.data.trendData)
+      }
+    })
   },
 
   switchPeriod(e) {
