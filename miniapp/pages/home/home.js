@@ -50,6 +50,7 @@ Page({
 
       const total = formattedTasks.length
       const doneCount = formattedTasks.filter(t => t.completed).length
+      const todayRate = total > 0 ? Math.round(doneCount / total * 100) : 0
       const stats = statsRes || {}
 
       this.setData({
@@ -57,7 +58,8 @@ Page({
         streakDays: stats.current_streak || 0,
         weekRate: stats.weekly_rate != null ? Math.round(stats.weekly_rate) : 0,
         monthRate: stats.monthly_rate != null ? Math.round(stats.monthly_rate) : 0,
-        rankLabel: '--',
+        // 规律性排名算法暂缓，后续接回 ranking 接口后替换这里。
+        rankLabel: `${todayRate}%`,
         heroCopy: doneCount === total && total > 0
           ? '今日任务已完成，日历和统计会自动同步。'
           : '先完成今天的任务，保持稳定节奏。'

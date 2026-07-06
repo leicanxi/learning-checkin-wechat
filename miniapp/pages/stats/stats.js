@@ -52,24 +52,22 @@ Page({
         }
       })
 
-      // 掌握进度 —— 后端字段 knowledge_progress（可能是 dict 或 array）
-      const rawKp = (stats && stats.knowledge_progress) ? stats.knowledge_progress : {}
-      let mastery
-      if (Array.isArray(rawKp)) {
-        mastery = rawKp
-      } else {
-        mastery = Object.entries(rawKp).map(([subject, progress]) => {
-          const pct = typeof progress === 'number' ? (progress > 1 ? progress : Math.round(progress * 100)) : 0
-          return { subject, progress: pct, note: '' }
-        })
-      }
-      const colors = ['var(--terracotta)', 'var(--sage)', '#d4a853', '#4d4c48']
-      const masteryData = mastery.slice(0, 2).map((m, i) => ({
-        subject: m.subject,
-        progress: Math.round(m.progress),
-        note: m.note || '',
-        bgColor: colors[i % colors.length]
-      }))
+      // MVP 已砍掉复习/掌握系统，不展示 knowledge_progress 的占位数据。
+      // 这里复用环形样式展示真实完成率。
+      const masteryData = stats ? [
+        {
+          subject: '本周完成率',
+          progress: Math.round(stats.weekly_rate || 0),
+          note: '近 7 天任务完成占比',
+          bgColor: 'var(--terracotta)'
+        },
+        {
+          subject: '近30天完成率',
+          progress: Math.round(stats.monthly_rate || 0),
+          note: '近 30 天任务完成占比',
+          bgColor: 'var(--sage)'
+        }
+      ] : []
 
       // 科目分布
       const subjects = (stats && stats.subject_distribution) ? stats.subject_distribution : []
@@ -136,8 +134,8 @@ Page({
       trendData,
       trendTag: '完成 18 次',
       masteryData: [
-        { subject: '英语词汇', progress: 82, note: 'Unit 1-4 掌握较稳定', bgColor: 'var(--terracotta)' },
-        { subject: '物理电学', progress: 64, note: '概念题仍需复盘', bgColor: 'var(--sage)' }
+        { subject: '本周完成率', progress: 82, note: '近 7 天任务完成占比', bgColor: 'var(--terracotta)' },
+        { subject: '近30天完成率', progress: 64, note: '近 30 天任务完成占比', bgColor: 'var(--sage)' }
       ],
       completedCount: '64 次',
       completionCopy: '本周已完成 18 次学习任务，其中英语任务占比最高。连续完成率稳定，周末任务仍有提升空间。',

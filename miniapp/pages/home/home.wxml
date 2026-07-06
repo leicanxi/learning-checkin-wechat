@@ -30,7 +30,8 @@
       <text class="metric-value">{{monthRate}}%</text>
     </view>
     <view class="metric-card">
-      <text class="metric-label">规律性排名</text>
+      <!-- 规律性排名算法暂缓，MVP 先展示当日完成率 -->
+      <text class="metric-label">当日完成率</text>
       <text class="metric-value">{{rankLabel}}</text>
     </view>
   </view>

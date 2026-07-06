@@ -1,5 +1,6 @@
 const { get, put, post, del } = require('../../utils/api')
 const auth = require('../../utils/auth')
+const { getBaseURL } = require('../../utils/config')
 const { getNavMetrics } = require('../../utils/nav')
 
 // 订阅消息模板 ID（在微信公众平台后台 -> 订阅消息 -> 选用模板后，把模板ID填到这里）
@@ -374,7 +375,43 @@ Page({
   },
 
   exportPDF() {
-    wx.showToast({ title: 'PDF 导出功能开发中', icon: 'none', duration: 1500 })
+    const token = auth.getToken()
+    if (!token) {
+      wx.showToast({ title: '请先登录', icon: 'none', duration: 1500 })
+      return
+    }
+
+    const app = getApp()
+    const baseURL = app && app.globalData.baseURL ? app.globalData.baseURL : getBaseURL()
+
+    wx.showLoading({ title: '生成中...' })
+    wx.downloadFile({
+      url: `${baseURL}/report/pdf`,
+      header: {
+        Authorization: `Bearer ${token}`
+      },
+      success(res) {
+        if (res.statusCode !== 200) {
+          wx.showToast({ title: `导出失败 ${res.statusCode}`, icon: 'none', duration: 1500 })
+          return
+        }
+
+        wx.openDocument({
+          filePath: res.tempFilePath,
+          fileType: 'pdf',
+          showMenu: true,
+          fail() {
+            wx.showToast({ title: 'PDF 打开失败', icon: 'none', duration: 1500 })
+          }
+        })
+      },
+      fail() {
+        wx.showToast({ title: 'PDF 下载失败', icon: 'none', duration: 1500 })
+      },
+      complete() {
+        wx.hideLoading()
+      }
+    })
   },
 
   showAbout() {

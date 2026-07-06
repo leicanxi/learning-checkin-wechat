@@ -27,17 +27,9 @@
       class="chart-canvas"
       style="width:100%;height:160px"
     ></canvas>
-    <!-- 降级方案：柱状图 -->
-    <view class="bar-fallback">
-      <view wx:for="{{trendData}}" wx:key="idx" class="bar-col">
-        <text class="bar-val">{{item.count}}</text>
-        <view class="bar" style="height:{{getBarHeight(item.count)}}px"></view>
-        <text class="bar-label">{{item.label}}</text>
-      </view>
-    </view>
   </view>
 
-  <!-- 环形进度 -->
+  <!-- 完成率概览 -->
   <view class="ring-grid">
     <view wx:for="{{masteryData}}" wx:key="idx" class="ring-card">
       <view class="progress-ring" style="background: conic-gradient({{item.bgColor}} {{item.progress}}%, var(--sand) {{item.progress}}%)">
@@ -50,7 +42,7 @@
     </view>
     <block wx:if="{{masteryData.length === 0}}">
       <view class="ring-card" style="grid-column:1/-1;justify-content:center">
-        <text class="empty-desc">暂无掌握数据</text>
+        <text class="empty-desc">暂无完成率数据</text>
       </view>
     </block>
   </view>
@@ -62,9 +54,9 @@
     <text class="completion-desc">{{completionCopy}}</text>
   </view>
 
-  <!-- 科目打卡分布 -->
+  <!-- 打卡分布 -->
   <view class="card pad mt">
-    <view class="section-title">科目打卡分布</view>
+    <view class="section-title">打卡分布</view>
     <view wx:if="{{subjectData.length > 0}}" class="subject-list">
       <view wx:for="{{subjectData}}" wx:key="idx" class="subject-row">
         <text class="subject-name">{{item.subject}}</text>
